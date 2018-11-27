@@ -15,13 +15,13 @@ outputWorld world = do outputThing world currentLocation
 
 
 outputThing :: World -> Thing -> IO ()
-outputThing world thing = putStrLn ((describeThing thing) world thing)
+outputThing world thing = putStrLn (describeThing thing world)
 
 
 outputEvent :: World -> Event -> IO ()
-outputEvent world event = case ((describeEvent event) world event) of
-                                       Nothing -> return ()
-                                       Just description -> putStrLn description
+outputEvent world event = case (describeEvent event world) of
+                            Nothing -> return ()
+                            Just description -> putStrLn description
 
 
 getEventInput :: (Set.Set Name) -> IO (Maybe Name)
@@ -30,12 +30,10 @@ getEventInput events =
      input <- getLine
      case input of
        command
-         | Set.member command events   -> return (Just command)
+         | Set.member command events   -> return $ Just command
          | "quit" `isPrefixOf` command -> return Nothing
-         | "help" `isPrefixOf` command -> do displayEventOptions
-                                             getEventInput events
-         | otherwise                   -> do printTryAgainMessage
-                                             getEventInput events
+         | "help" `isPrefixOf` command -> displayEventOptions >> getEventInput events
+         | otherwise                   -> printTryAgainMessage >> getEventInput events
   where
     displayEventOptions = do putStrLn "help"
                              putStrLn "quit"
@@ -43,4 +41,3 @@ getEventInput events =
     printTryAgainMessage = do putStrLn "Unrecognized command, please try again or enter:"
                               putStrLn "\"help\" to show options"
                               putStrLn "\"quit\" to exit the game"
-                                                                    

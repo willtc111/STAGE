@@ -18,12 +18,11 @@ data Event = Event { shouldRun :: World -> Bool
                    , updateWorld :: World -> Maybe World
                    , pre :: [Event]
                    , post :: [Event]
-                   , describeEvent :: World -> Event -> Maybe String
+                   , describeEvent :: World -> Maybe String
                    }
 
 data Thing = Thing { name :: String
-                   , describeThing :: World -> Thing -> String
+                   , describeThing :: World -> String
                    , stats :: Stats
                    , contents :: [Id]
                    }
-
