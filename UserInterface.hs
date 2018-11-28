@@ -1,4 +1,4 @@
-module UserInterface (outputWorld, outputThing, outputEvent, getEventInput) where
+module UserInterface (outputWorld, outputThing, outputAction, getActionInput) where
 
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -18,26 +18,26 @@ outputThing :: World -> Thing -> IO ()
 outputThing world thing = putStrLn (describeThing thing world)
 
 
-outputEvent :: World -> Event -> IO ()
-outputEvent world event = case (describeEvent event world) of
-                            Nothing -> return ()
-                            Just description -> putStrLn description
+outputAction :: World -> Action -> IO ()
+outputAction world action = case (describeAction action world) of
+                              Nothing -> return ()
+                              Just description -> putStrLn description
 
 
-getEventInput :: (Set.Set Name) -> IO (Maybe Name)
-getEventInput events =
+getActionInput :: (Set.Set Name) -> IO (Maybe Name)
+getActionInput actions =
   do putStrLn "What do you want to do next?"
      input <- getLine
      case input of
        command
-         | Set.member command events   -> return $ Just command
+         | Set.member command actions  -> return $ Just command
          | "quit" `isPrefixOf` command -> return Nothing
-         | "help" `isPrefixOf` command -> displayEventOptions >> getEventInput events
-         | otherwise                   -> printTryAgainMessage >> getEventInput events
+         | "help" `isPrefixOf` command -> displayActionOptions >> getActionInput actions
+         | otherwise                   -> printTryAgainMessage >> getActionInput actions
   where
-    displayEventOptions = do putStrLn "help"
-                             putStrLn "quit"
-                             putStr (foldr (\name s -> name ++ "\n" ++ s) "\n" (Set.elems events))
+    displayActionOptions = do putStrLn "help"
+                              putStrLn "quit"
+                              putStr (foldr (\name s -> name ++ "\n" ++ s) "\n" (Set.elems actions))
     printTryAgainMessage = do putStrLn "Unrecognized command, please try again or enter:"
                               putStrLn "\"help\" to show options"
                               putStrLn "\"quit\" to exit the game"

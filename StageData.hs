@@ -1,4 +1,4 @@
-module StageData (Id, Name, Class, Instance, Stats, World(..), Event(..), Thing(..)) where
+module StageData (Id, Name, Class, Instance, Stats, World(..), Action(..), Thing(..)) where
 
 import qualified Data.Map.Strict as Map
 import GHC.Natural
@@ -14,12 +14,12 @@ data World = World { things :: Map.Map Id Thing
                    , location :: Id
                    }
 
-data Event = Event { shouldRun :: World -> Bool
-                   , updateWorld :: World -> Maybe World
-                   , pre :: [Event]
-                   , post :: [Event]
-                   , describeEvent :: World -> Maybe String
-                   }
+data Action = Action { shouldRun :: World -> Bool
+                     , updateWorld :: World -> Maybe World
+                     , pre :: [Action]
+                     , post :: [Action]
+                     , describeAction :: World -> Maybe String
+                     }
 
 data Thing = Thing { name :: String
                    , describeThing :: World -> String
