@@ -1,12 +1,9 @@
-module StageData (Id, Name, Class, Instance, Stats, World(..), Action(..), Thing(..)) where
+module StageData where
 
 import qualified Data.Map.Strict as Map
-import GHC.Natural
 
 type Id = String
 type Name = String
-type Class = String
-type Instance = Natural
 type Stats = Map.Map String Integer
 
 data World = World { things :: Map.Map Id Thing

@@ -4,11 +4,8 @@ import Data.Maybe
 import Data.List
 import System.Environment
 import StageData
+import StageParser
 import qualified UserInterface as UI
-
-readStage :: String -> Either String (World, Map.Map Name [Action])
-readStage = undefined -- Call the compiler to do this
-
 
 runGame :: (Map.Map Name [Action]) -> World -> IO ()
 runGame actions world = do actionChoice <- getAction actions world
@@ -38,7 +35,7 @@ runAction world action = UI.outputAction world action >> return (updateWorld act
 main :: IO ()
 main = do args <- getArgs
           case args of
-            [gameFile] -> do game <- fmap readStage $ readFile gameFile
+            [gameFile] -> do game <- readStage <$> readFile gameFile
                              case game of
                                Left  message          -> printError gameFile message
                                Right (world, actions) -> runGame actions world
