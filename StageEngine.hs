@@ -4,7 +4,7 @@ import Data.Maybe
 import Data.List
 import System.Environment
 import StageData
-import StageParser
+import StageCompiler
 import qualified UserInterface as UI
 
 runGame :: (Map.Map Name [Action]) -> World -> IO ()
@@ -35,7 +35,7 @@ runAction world action = UI.outputAction world action >> return (updateWorld act
 main :: IO ()
 main = do args <- getArgs
           case args of
-            [gameFile] -> do game <- readStage <$> readFile gameFile
+            [gameFile] -> do game <- compileStage gameFile
                              case game of
                                Left  message          -> printError gameFile message
                                Right (world, actions) -> runGame actions world

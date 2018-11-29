@@ -1,9 +1,9 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module StageParser (readStage) where
+module StageParser (parseStage) where
 
 import StageData
-import StageParserData
+import StageCompilerData
 import StageLexer
 import qualified Data.Map.Strict as Map
 import Text.Parsec
@@ -20,26 +20,8 @@ import Data.Bifunctor
 
 type Parser a = ParsecT String () Identity a
 
-readStage :: String -> Either String (World, Map.Map Name [Action])
-readStage s = (bimap show id $ parse pStage "" s) >>= build
-
--- build
-
-build :: (PlayerDecl, [Decl]) -> Either String (World, Map.Map Name [Action])
-build (playerDecl, decls) = undefined
-  where Decls{..} = sortDecls decls
-
-sortDecls :: [Decl] -> Decls
-sortDecls = foldr aux emptyDecls
-  where aux (ThingDescDecl'  decl) decls = decls{thingDescDecls  = decl:(thingDescDecls  decls)}
-        aux (ActionDescDecl' decl) decls = decls{actionDescDecls = decl:(actionDescDecls decls)}
-        aux (ClassDecl'      decl) decls = decls{classDecls      = decl:(classDecls      decls)}
-        aux (ThingDecl'      decl) decls = decls{thingDecls      = decl:(thingDecls      decls)}
-        aux (ActionDecl'     decl) decls = decls{actionDecls     = decl:(actionDecls     decls)}
-
-
-
--- parse
+parseStage :: String -> String -> Either String (PlayerDecl, [Decl])
+parseStage source = bimap show id . parse pStage source
 
 symbols :: String -> Parser ()
 symbols = mapM_ symbol . words

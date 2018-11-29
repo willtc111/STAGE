@@ -1,4 +1,4 @@
-module StageParserData where
+module StageCompilerData where
 
 import StageData
 
