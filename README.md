@@ -49,7 +49,7 @@ SubThingDesc := its description | ThingDesc
 
 ActionDesc := nothing | String | ActionDesc if Condition, and otherwise ActionDesc | description of Either(player, location) by ThingDesc | ActionDesc + ActionDesc
 
-ClassDecl := Either("A", "An") Id Maybe(is List(An Id) and) Maybe(has Either(stat, stats) List(Id = Int) and) is described by ThingDesc.
+ClassDecl := Either("A", "An") Id Maybe(has Either(stat, stats) List(Id = Int) and) is described by ThingDesc.
 
 ThingDecl := "Thing" Id is An Id Maybe(with Either(stat, stats) List(Id = Int) Maybe(that contains List(Id)).
 

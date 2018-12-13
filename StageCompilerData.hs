@@ -27,7 +27,6 @@ data ActionDesc = LiteralADesc String
 
 data ClassDecl = ClassDecl
       { classId :: Id
-      , parents :: [Id]
       , classStats :: Stats
       , classDesc :: ThingDesc
       }

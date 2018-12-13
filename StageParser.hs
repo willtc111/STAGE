@@ -51,7 +51,6 @@ pDecl = do decl <- tryChoice [ ClassDecl' <$> pClassDecl
 pClassDecl :: Parser ClassDecl
 pClassDecl = do eitherSymbol "A" "An"
                 classId <- identifier
-                let parents = [] -- TODO
                 let classStats = Map.empty -- TODO
                 symbols "is described by"
                 classDesc <- pThingDesc
