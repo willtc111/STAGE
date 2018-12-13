@@ -68,6 +68,7 @@ emptyDecls = Decls { classDecls = []
 data PlayerDecl = PlayerDecl
                     { playerStats :: Stats
                     , playerThings :: [Id]
+                    , playerStart :: Id
                     , playerDesc :: ThingDesc
                     }
   deriving (Show)

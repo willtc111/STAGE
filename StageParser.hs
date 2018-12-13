@@ -88,7 +88,9 @@ pPlayerDecl :: Parser PlayerDecl
 pPlayerDecl = do symbols "The player"
                  let playerStats = Map.empty -- TODO
                  let playerThings = [] -- TODO
-                 symbols "is described by"
+                 symbols "starts in"
+                 playerStart <- identifier
+                 symbols "and is described by"
                  playerDesc <- pThingDesc
                  dot
                  return PlayerDecl{..}

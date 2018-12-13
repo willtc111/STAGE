@@ -59,6 +59,6 @@ Decl := ClassDecl | ThingDecl | ActionDecl
 
 Decls := Maybe(Decls Decl)
 
-PlayerDecl := "The" player Maybe(has Either(stat, stats) List(Id = Int) and) Maybe(has Either(thing, things) List(Id) and) is described by ThingDesc.
+PlayerDecl := "The" player Maybe(has Either(stat, stats) List(Id = Int) and) Maybe(has Either(thing, things) List(Id) and) starts in Id and is described by ThingDesc.
 
 Stage := NonPlayerDecls PlayerDecl NonPlayerDecls

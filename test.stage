@@ -4,7 +4,7 @@
  - There are no stats or items.
  -}
 
-The player is described by "You don't question your simple existence.".
+The player starts in room1 and is described by "You don't question your simple existence.".
 
 A room is described by "You are in " + its id + ". There is a door here.".
 Thing room1 is a room.
