@@ -17,8 +17,6 @@ build (playerDecl, decls) = undefined
 
 sortDecls :: [Decl] -> Decls
 sortDecls = foldr aux emptyDecls
-  where aux (ThingDescDecl'  decl) decls = decls{thingDescDecls  = decl:(thingDescDecls  decls)}
-        aux (ActionDescDecl' decl) decls = decls{actionDescDecls = decl:(actionDescDecls decls)}
-        aux (ClassDecl'      decl) decls = decls{classDecls      = decl:(classDecls      decls)}
+  where aux (ClassDecl'      decl) decls = decls{classDecls      = decl:(classDecls      decls)}
         aux (ThingDecl'      decl) decls = decls{thingDecls      = decl:(thingDecls      decls)}
         aux (ActionDecl'     decl) decls = decls{actionDecls     = decl:(actionDecls     decls)}

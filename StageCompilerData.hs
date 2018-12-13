@@ -25,18 +25,6 @@ data ActionDesc = LiteralADesc String
                -- TODO
   deriving (Show)
 
-data ThingDescDecl = ThingDescDecl
-      { thingDescId :: Id
-      , describeThing :: ThingDesc
-      }
-  deriving (Show)
-
-data ActionDescDecl = ActionDescDecl
-      { actionDescId :: Id
-      , describeAction :: ActionDesc
-      }
-  deriving (Show)
-
 data ClassDecl = ClassDecl
       { classId :: Id
       , parents :: [Id]
@@ -63,23 +51,17 @@ data ActionDecl = ActionDecl
       }
   deriving (Show)
 
-data Decl = ThingDescDecl' ThingDescDecl
-          | ActionDescDecl' ActionDescDecl
-          | ClassDecl' ClassDecl
+data Decl = ClassDecl' ClassDecl
           | ThingDecl' ThingDecl
           | ActionDecl' ActionDecl
 
-data Decls = Decls { thingDescDecls :: [ThingDescDecl]
-                   , actionDescDecls :: [ActionDescDecl]
-                   , classDecls :: [ClassDecl]
+data Decls = Decls { classDecls :: [ClassDecl]
                    , thingDecls :: [ThingDecl]
                    , actionDecls :: [ActionDecl]
                    }
 
 emptyDecls :: Decls
-emptyDecls = Decls { thingDescDecls = []
-                   , actionDescDecls = []
-                   , classDecls = []
+emptyDecls = Decls { classDecls = []
                    , thingDecls = []
                    , actionDecls = []
                    }

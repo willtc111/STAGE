@@ -41,28 +41,12 @@ pStage = do whiteSpace
             return (pPlayerDecl, decls1 ++ decls2)
 
 pDecl :: Parser Decl
-pDecl = do decl <- tryChoice [ ThingDescDecl' <$> pThingDescDecl
-                             , ActionDescDecl' <$> pActionDescDecl
-                             , ClassDecl' <$> pClassDecl
+pDecl = do decl <- tryChoice [ ClassDecl' <$> pClassDecl
                              , ThingDecl' <$> pThingDecl
                              , ActionDecl' <$> pActionDecl
                              ]
            dot
            return decl
-
-pThingDescDecl :: Parser ThingDescDecl
-pThingDescDecl = do symbol "Description"
-                    thingDescId <- identifier
-                    symbols "describes a thing by"
-                    describeThing <- pThingDesc
-                    return ThingDescDecl{..}
-
-pActionDescDecl :: Parser ActionDescDecl
-pActionDescDecl = do symbol "Description"
-                     actionDescId <- identifier
-                     symbols "describes an action by"
-                     describeAction <- pActionDesc
-                     return ActionDescDecl{..}
 
 pClassDecl :: Parser ClassDecl
 pClassDecl = do eitherSymbol "A" "An"

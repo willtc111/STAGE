@@ -37,21 +37,17 @@ Pred := is unconditional | is Maybe(not) Id | does Maybe(not) contain something 
 
 Cmp := = | /= | < | <= | > | >=
 
-Mod := doing nothing | setting Stat to Expr | adding Id | removing Id | Mod if it Pred, and otherwise Mod | doing modification Id | modifying everything it contains that Pred by Mod | List(Mod)
+Mod := doing nothing | setting Stat to Expr | adding Id | removing Id | Mod if it Pred, and otherwise Mod | modifying everything it contains that Pred by Mod | List(Mod)
 
 Expr := Int | Int Op Int | Stat | Id.Stat
 
 Op := + | - | / | * | %
 
-ThingDesc := String | its id | its Stat | ThingDesc if it Pred, and otherwise ThingDesc | ThingDesc if Condition, and otherwise ThingDesc | for each contained thing, SubThingDesc, separated by String | description Id | ThingDesc + ThingDesc
+ThingDesc := String | its id | its Stat | ThingDesc if it Pred, and otherwise ThingDesc | ThingDesc if Condition, and otherwise ThingDesc | for each contained thing, SubThingDesc, separated by String | ThingDesc + ThingDesc
 
 SubThingDesc := its description | ThingDesc
 
-ActionDesc := nothing | String | ActionDesc if Condition, and otherwise ActionDesc | description of Either(player, location) by ThingDesc | description Id | ActionDesc + ActionDesc
-
-ThingDescDecl := "Description" Id describes a thing by ThingDesc.
-
-ActionDescDecl := "Description" Id describes an action by ActionDesc.
+ActionDesc := nothing | String | ActionDesc if Condition, and otherwise ActionDesc | description of Either(player, location) by ThingDesc | ActionDesc + ActionDesc
 
 ClassDecl := Either("A", "An") Id Maybe(is List(An Id) and) Maybe(has Either(stat, stats) List(Id = Int) and) is described by ThingDesc.
 
@@ -59,7 +55,7 @@ ThingDecl := "Thing" Id is An Id Maybe(with Either(stat, stats) List(Id = Int) M
 
 ActionDecl := "Action" String is available when Condition, modifies player by Mod, modifies current location by Mod before setting location to Id, and is described by ActionDesc.
 
-Decl := ThingDescDecl | ActionDescDecl | ClassDecl | ThingDecl | ActionDecl
+Decl := ClassDecl | ThingDecl | ActionDecl
 
 Decls := Maybe(Decls Decl)
 
