@@ -32,6 +32,8 @@ data ClassDecl = ClassDecl
       }
   deriving (Show)
 
+data Class = Class Stats (Thing -> World -> String)
+
 data ThingDecl = ThingDecl
       { thingId :: Id
       , thingClass :: Id
