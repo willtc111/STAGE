@@ -40,7 +40,7 @@ data ActionDescDecl = ActionDescDecl
 data ClassDecl = ClassDecl
       { classId :: Id
       , parents :: [Id]
-      , statNames :: [Id]
+      , classStats :: Stats
       , classDesc :: ThingDesc
       }
   deriving (Show)

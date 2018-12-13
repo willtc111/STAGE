@@ -53,7 +53,7 @@ ThingDescDecl := "Description" Id describes a thing by ThingDesc.
 
 ActionDescDecl := "Description" Id describes an action by ActionDesc.
 
-ClassDecl := Either("A", "An") Id Maybe(is List(An Id) and) Maybe(has Either(stat, stats) List(Id) and) is described by ThingDesc.
+ClassDecl := Either("A", "An") Id Maybe(is List(An Id) and) Maybe(has Either(stat, stats) List(Id = Int) and) is described by ThingDesc.
 
 ThingDecl := "Thing" Id is An Id Maybe(with Either(stat, stats) List(Id = Int) Maybe(that contains List(Id)).
 
@@ -66,4 +66,3 @@ Decls := Maybe(Decls Decl)
 PlayerDecl := "The" player Maybe(has Either(stat, stats) List(Id = Int) and) Maybe(has Either(thing, things) List(Id) and) is described by ThingDesc.
 
 Stage := NonPlayerDecls PlayerDecl NonPlayerDecls
-

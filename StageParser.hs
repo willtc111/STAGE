@@ -68,7 +68,7 @@ pClassDecl :: Parser ClassDecl
 pClassDecl = do eitherSymbol "A" "An"
                 classId <- identifier
                 let parents = [] -- TODO
-                let statNames = [] -- TODO
+                let classStats = Map.empty -- TODO
                 symbols "is described by"
                 classDesc <- pThingDesc
                 return ClassDecl{..}
