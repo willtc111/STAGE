@@ -23,44 +23,76 @@ type Parser a = ParsecT String () Identity a
 parseStage :: String -> String -> Either String (PlayerDecl, [Decl])
 parseStage source = bimap show id . parse pStage source
 
-symbols :: String -> Parser ()
-symbols = mapM_ symbol . words
+pfSymbols :: String -> Parser ()
+pfSymbols = mapM_ symbol . words
 
-eitherSymbol :: String -> String -> Parser String
-eitherSymbol s1 s2 = try (symbol s1) <|> symbol s2
+pfChoices :: [Parser a] -> Parser a
+pfChoices = choice . map try
 
-tryChoices :: [Parser a] -> Parser a
-tryChoices = choice . map try
+pfList :: Parser a -> Parser [a]
+pfList p = pfChoices [one, two, many]
+  where one = (:[]) <$> p
+        two = do first <- p
+                 symbol "and"
+                 second <- p
+                 return [first, second]
+        many = do start <- p
+                  comma
+                  middle <- endBy1 p comma
+                  symbol "and"
+                  end <- p
+                  return $ start : middle ++ [end]
 
-pStage :: Parser (PlayerDecl, [Decl])
-pStage = do whiteSpace
-            decls1 <- many pDecl
-            pPlayerDecl <- pPlayerDecl
-            decls2 <- many pDecl
-            eof
-            return (pPlayerDecl, decls1 ++ decls2)
+pfMaybe :: Parser a -> Parser (Maybe a)
+pfMaybe = optionMaybe . try
 
-pDecl :: Parser Decl
-pDecl = do decl <- tryChoices [ ClassDecl' <$> pClassDecl
-                              , ThingDecl' <$> pThingDecl
-                              , ActionDecl' <$> pActionDecl
-                              ]
-           dot
-           return decl
+pAn :: Parser ()
+pAn = pfChoices [symbol "a", symbol "an"] >> return ()
+
+pCondition :: Parser Condition
+pCondition = pfChoices [ LocationCondition <$> (symbol "location" >> pPred)
+                      -- TODO
+                       ]
+
+pPred :: Parser Pred
+pPred = pfChoices [ const TruePred <$> pfSymbols "is unconditional"
+                  , IdPred         <$> (symbol "is" >> identifier)
+                 -- TODO
+                  ]
+
+pMod :: Parser Mod
+pMod = pfChoices [ const DoNothingMod <$> pfSymbols "doing nothing"
+                -- TODO
+                 ]
+
+pThingDesc :: Parser ThingDesc
+pThingDesc = concatTDesc <$> sepBy1 pThingDescNoConcat (symbol "+")
+  where concatTDesc [desc] = desc
+        concatTDesc descs  = ConcatTDesc descs
+        pThingDescNoConcat =
+          pfChoices [ LiteralTDesc  <$> stringLiteral
+                    , const NameTDesc <$> pfSymbols "its name"
+                   -- TODO
+                    ]
+
+pActionDesc :: Parser ActionDesc
+pActionDesc = pfChoices [ LiteralADesc <$> stringLiteral
+                       -- TODO
+                        ]
 
 pClassDecl :: Parser ClassDecl
-pClassDecl = do eitherSymbol "A" "An"
+pClassDecl = do pfChoices [symbol "A", symbol "An"]
                 classId <- identifier
                 let classStats = Map.empty -- TODO
-                symbols "is described by"
+                pfSymbols "is described by"
                 classDesc <- pThingDesc
                 return ClassDecl{..}
 
 pThingDecl :: Parser ThingDecl
-pThingDecl = do tryChoices [symbol "Thing", symbol "Location"]
+pThingDecl = do pfChoices [symbol "Thing", symbol "Location"]
                 thingId <- identifier
                 symbol "is"
-                eitherSymbol "a" "an"
+                pAn
                 thingClass <- identifier
                 symbol "named"
                 name <- stringLiteral
@@ -69,72 +101,57 @@ pThingDecl = do tryChoices [symbol "Thing", symbol "Location"]
                 return ThingDecl{..}
 
 pActionDecl :: Parser ActionDecl
-pActionDecl = tryChoices [pNormalActionDecl, pGameEndDecl]
+pActionDecl = pfChoices [pNormalActionDecl, pGameEndDecl]
   where pNormalActionDecl = do symbol "Action"
                                actionName <- stringLiteral
-                               symbols "is available when"
+                               pfSymbols "is available when"
                                condition <- pCondition
                                comma
-                               symbols "modifies player by"
+                               pfSymbols "modifies player by"
                                modifyPlayer <- pMod
                                comma
-                               symbols "modifies current location by"
+                               pfSymbols "modifies current location by"
                                modifyCurrentLocation <- pMod
-                               symbols "before setting location to"
+                               pfSymbols "before setting location to"
                                newLocation <- identifier
                                comma
-                               symbols "and is described by"
+                               pfSymbols "and is described by"
                                actionDesc <- pActionDesc
                                return ActionDecl{..}
         pGameEndDecl = do symbol "Action"
                           actionName <- stringLiteral
-                          symbols "is available when"
+                          pfSymbols "is available when"
                           condition <- pCondition
                           comma
-                          symbols "ends the game"
+                          pfSymbols "ends the game"
                           comma
-                          symbols "and is described by"
+                          pfSymbols "and is described by"
                           actionDesc <- pActionDesc
                           return GameEndDecl{..}
 
+pDecl :: Parser Decl
+pDecl = do decl <- pfChoices [ ClassDecl' <$> pClassDecl
+                             , ThingDecl' <$> pThingDecl
+                             , ActionDecl' <$> pActionDecl
+                             ]
+           dot
+           return decl
+
 pPlayerDecl :: Parser PlayerDecl
-pPlayerDecl = do symbols "The player"
+pPlayerDecl = do pfSymbols "The player"
                  let playerStats = Map.empty -- TODO
                  let playerThings = [] -- TODO
-                 symbols "starts in"
+                 pfSymbols "starts in"
                  playerStart <- identifier
-                 symbols "and is described by"
+                 pfSymbols "and is described by"
                  playerDesc <- pThingDesc
                  dot
                  return PlayerDecl{..}
 
-pThingDesc :: Parser ThingDesc
-pThingDesc = concatTDesc <$> sepBy1 pThingDescNoConcat (symbol "+")
-  where concatTDesc [desc] = desc
-        concatTDesc descs  = ConcatTDesc descs
-        pThingDescNoConcat =
-          tryChoices [ LiteralTDesc  <$> stringLiteral
-                     , const NameTDesc <$> symbols "its name"
-                    -- TODO
-                     ]
-
-pActionDesc :: Parser ActionDesc
-pActionDesc = tryChoices [ LiteralADesc <$> stringLiteral
-                        -- TODO
-                         ]
-
-pCondition :: Parser Condition
-pCondition = tryChoices [ LocationCondition <$> (symbol "location" >> pPred)
-                       -- TODO
-                        ]
-
-pMod :: Parser Mod
-pMod = tryChoices [ const DoNothingMod <$> symbols "doing nothing"
-                 -- TODO
-                  ]
-
-pPred :: Parser Pred
-pPred = tryChoices [ const TruePred <$> symbols "is unconditional"
-                   , IdPred         <$> (symbol "is" >> identifier)
-                  -- TODO
-                   ]
+pStage :: Parser (PlayerDecl, [Decl])
+pStage = do whiteSpace
+            decls1 <- many pDecl
+            pPlayerDecl <- pPlayerDecl
+            decls2 <- many pDecl
+            eof
+            return (pPlayerDecl, decls1 ++ decls2)
