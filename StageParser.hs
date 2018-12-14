@@ -9,7 +9,6 @@ import qualified Data.Map.Strict as Map
 import Text.Parsec
 import Data.Functor.Identity
 import Data.Bifunctor
-import Control.Monad
 
 {-
  - For brevity:
@@ -30,33 +29,34 @@ symbols = mapM_ symbol . words
 pfChoices :: [Parser a] -> Parser a
 pfChoices = choice . map try
 
-pfList :: Parser a -> Parser (a, [a])
-pfList p = pfChoices [one, two, many]
-  where one = (, []) <$> p
-        two = do first <- p
+pfList :: Parser a -> Parser (a, a, [a])
+pfList p = pfChoices [two, many]
+  where two = do first <- p
                  symbol "and"
                  second <- p
-                 return (first, [second])
-        many = do start <- p
+                 return (first, second, [])
+        many = do first <- p
                   comma
-                  middle <- endBy1 p comma
+                  second <- p
+                  comma
+                  more <- endBy p comma
                   symbol "and"
-                  end <- p
-                  return $ (start, middle ++ [end])
+                  lastOne <- p
+                  return (first, second, more ++ [lastOne])
 
 pfMaybe :: Parser a -> Parser (Maybe a)
 pfMaybe = optionMaybe . try
 
 pAn :: Parser ()
-pAn = void $ pfChoices [symbol "a", symbol "an"]
+pAn = pfChoices [symbols "a", symbols "an"]
 
 pCondition :: Parser Condition
 pCondition = pfChoices [ parens pCondition
                        , LocationCondition <$> (symbols "the current location" >> pPred)
                        , PlayerCondition <$> (symbols "the player" >> pPred)
-                       , liftM2 OrCondition pCondition pCondition
-                       , do (first, rest) <- pfList pCondition
-                            return $ foldr AndCondition first rest
+                       , OrCondition <$> pCondition <*> pCondition
+                       , do (first, second, rest) <- pfList pCondition
+                            return $ foldr AndCondition first (second:rest)
                        ]
 
 pPred :: Parser Pred
