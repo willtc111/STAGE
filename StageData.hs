@@ -13,8 +13,6 @@ data World = World { things :: Map.Map Id Thing
 
 data Action = Action { shouldRun :: World -> Bool
                      , updateWorld :: World -> Maybe World
-                     , pre :: [Action] -- pre/post are for a future extension
-                     , post :: [Action] -- they are not currently used for anything
                      , describeAction :: World -> String
                      }
 
