@@ -43,7 +43,7 @@ Expr := Int | Int Op Int | Stat | Id.Stat
 
 Op := + | - | / | * | %
 
-ThingDesc := String | its id | its Stat | ThingDesc if it Pred, and otherwise ThingDesc | ThingDesc if Condition, and otherwise ThingDesc | for each contained thing, SubThingDesc, separated by String | ThingDesc + ThingDesc
+ThingDesc := String | its name | its Stat | ThingDesc if it Pred, and otherwise ThingDesc | ThingDesc if Condition, and otherwise ThingDesc | for each contained thing, SubThingDesc, separated by String | ThingDesc + ThingDesc
 
 SubThingDesc := its description | ThingDesc
 
