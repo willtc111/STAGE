@@ -2,7 +2,7 @@
 
 module StageCompiler (compileStage) where
 
-import Prelude hiding (pred)
+import Prelude hiding (pred, mod)
 import StageParser
 import StageData hiding (thingId)
 import qualified StageData as SD
@@ -32,7 +32,11 @@ sortDecls = foldr aux emptyDecls
         aux (ActionDecl'     decl) decls = decls{actionDecls     = decl:(actionDecls     decls)}
 
 buildClasses :: [ClassDecl] -> Fallible (Map.Map Id Class)
-buildClasses = undefined
+buildClasses = foldr ((=<<) . aux) (return Map.empty)
+  where aux ClassDecl{..} classes =
+          case Map.lookup classId classes of
+            Nothing -> return $ Map.insert classId (Class classStats (buildThingDesc classDesc)) classes
+            Just _  -> fail   $ "Duplicate class id: " ++ classId
 
 buildThings :: Map.Map Id Class -> [ThingDecl] -> Fallible (Map.Map Id Thing)
 buildThings = undefined
@@ -44,21 +48,22 @@ buildPlayer :: Map.Map Id Thing -> PlayerDecl -> Fallible (Thing, Id)
 buildPlayer = undefined
 
 buildCondition :: Condition -> World -> Bool
-buildCondition condition = case condition of
-  LocationCondition pred -> aux select $ buildPred pred
-    where select = \World{..} -> Map.lookup location things
-  where aux select test = maybe False test . select
+buildCondition (LocationCondition pred) = test . select
+  where select World{..} = Map.lookup location things
+        test = maybe False $ buildPred pred
 
 buildPred :: Pred -> Thing -> Bool
-buildPred pred = case pred of
-  TruePred -> const True
-  IdPred s -> (== s) . SD.thingId
+buildPred TruePred   = const True
+buildPred (IdPred s) = (== s) . SD.thingId
 
 buildMod :: Mod -> Thing -> Thing
-buildMod = undefined
+buildMod DoNothingMod = id
 
 buildThingDesc :: ThingDesc -> Thing -> World -> String
-buildThingDesc = undefined
+buildThingDesc (LiteralTDesc s)    = \_ _ -> s
+buildThingDesc IdTDesc             = \Thing{..} _ -> thingId
+buildThingDesc (ConcatTDesc descs) = foldr aux (\_ _ -> "") $ map buildThingDesc descs
+  where aux d1 d2 = \thing world -> d1 thing world ++ d2 thing world
 
 buildActionDesc :: ActionDesc -> World -> Maybe String
-buildActionDesc = undefined
+buildActionDesc (LiteralADesc s) = const $ Just s
