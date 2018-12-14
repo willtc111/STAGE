@@ -3,7 +3,9 @@ module StageCompilerData where
 import StageData
 
 data Condition = LocationCondition Pred
-              -- TODO
+               | PlayerCondition Pred
+               | OrCondition Condition Condition
+               | AndCondition Condition Condition
   deriving (Show)
 
 data Pred = TruePred

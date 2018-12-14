@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
 {-# LANGUAGE RecordWildCards, TupleSections #-}
 
 module StageCompiler (compileStage) where
@@ -117,6 +118,12 @@ buildCondition thingIds condition = case condition of
        let select World{..} = Map.lookup location things
            test = maybe False pred'
        return $ test . select
+  PlayerCondition pred -> (. player) <$> buildPred thingIds pred
+  OrCondition c1 c2 -> combine (||) c1 c2
+  AndCondition c1 c2 -> combine (&&) c1 c2
+  where combine f c1 c2 = do c1' <- buildCondition thingIds c1
+                             c2' <- buildCondition thingIds c2
+                             return $ liftM2 f c1' c2'
 
 buildPred :: Set.Set Id -> Pred -> Fallible (Thing -> Bool)
 buildPred thingIds pred = case pred of
