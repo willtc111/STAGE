@@ -29,8 +29,8 @@ symbols = mapM_ symbol . words
 eitherSymbol :: String -> String -> Parser String
 eitherSymbol s1 s2 = try (symbol s1) <|> symbol s2
 
-tryChoice :: [Parser a] -> Parser a
-tryChoice = choice . map try
+tryChoices :: [Parser a] -> Parser a
+tryChoices = choice . map try
 
 pStage :: Parser (PlayerDecl, [Decl])
 pStage = do whiteSpace
@@ -41,10 +41,10 @@ pStage = do whiteSpace
             return (pPlayerDecl, decls1 ++ decls2)
 
 pDecl :: Parser Decl
-pDecl = do decl <- tryChoice [ ClassDecl' <$> pClassDecl
-                             , ThingDecl' <$> pThingDecl
-                             , ActionDecl' <$> pActionDecl
-                             ]
+pDecl = do decl <- tryChoices [ ClassDecl' <$> pClassDecl
+                              , ThingDecl' <$> pThingDecl
+                              , ActionDecl' <$> pActionDecl
+                              ]
            dot
            return decl
 
@@ -62,27 +62,40 @@ pThingDecl = do symbol "Thing"
                 symbol "is"
                 eitherSymbol "a" "an"
                 thingClass <- identifier
+                symbol "named"
+                name <- stringLiteral
                 let stats = Map.empty -- TODO
-                let containing = [] -- TODO
+                let contents = [] -- TODO
                 return ThingDecl{..}
 
 pActionDecl :: Parser ActionDecl
-pActionDecl = do symbol "Action"
-                 actionName <- stringLiteral
-                 symbols "is available when"
-                 shouldRun <- pCondition
-                 comma
-                 symbols "modifies player by"
-                 modifyPlayer <- pMod
-                 comma
-                 symbols "modifies current location by"
-                 modifyCurrentLocation <- pMod
-                 symbols "before setting location to"
-                 newLocation <- identifier
-                 comma
-                 symbols "and is described by"
-                 actionDesc <- pActionDesc
-                 return ActionDecl{..}
+pActionDecl = tryChoices [pNormalActionDecl, pGameEndDecl]
+  where pNormalActionDecl = do symbol "Action"
+                               actionName <- stringLiteral
+                               symbols "is available when"
+                               condition <- pCondition
+                               comma
+                               symbols "modifies player by"
+                               modifyPlayer <- pMod
+                               comma
+                               symbols "modifies current location by"
+                               modifyCurrentLocation <- pMod
+                               symbols "before setting location to"
+                               newLocation <- identifier
+                               comma
+                               symbols "and is described by"
+                               actionDesc <- pActionDesc
+                               return ActionDecl{..}
+        pGameEndDecl = do symbol "Action"
+                          actionName <- stringLiteral
+                          symbols "is available when"
+                          condition <- pCondition
+                          comma
+                          symbols "ends the game"
+                          comma
+                          symbols "and is described by"
+                          actionDesc <- pActionDesc
+                          return GameEndDecl{..}
 
 pPlayerDecl :: Parser PlayerDecl
 pPlayerDecl = do symbols "The player"
@@ -100,28 +113,28 @@ pThingDesc = concatTDesc <$> sepBy1 pThingDescNoConcat (symbol "+")
   where concatTDesc [desc] = desc
         concatTDesc descs  = ConcatTDesc descs
         pThingDescNoConcat =
-          tryChoice [ LiteralTDesc  <$> stringLiteral
-                    , const IdTDesc <$> symbols "its id"
-                   -- TODO
-                    ]
+          tryChoices [ LiteralTDesc  <$> stringLiteral
+                     , const NameTDesc <$> symbols "its name"
+                    -- TODO
+                     ]
 
 pActionDesc :: Parser ActionDesc
-pActionDesc = tryChoice [ LiteralADesc <$> stringLiteral
+pActionDesc = tryChoices [ LiteralADesc <$> stringLiteral
+                        -- TODO
+                         ]
+
+pCondition :: Parser Condition
+pCondition = tryChoices [ LocationCondition <$> (symbol "location" >> pPred)
                        -- TODO
                         ]
 
-pCondition :: Parser Condition
-pCondition = tryChoice [ LocationCondition <$> (symbol "location" >> pPred)
-                      -- TODO
-                       ]
-
 pMod :: Parser Mod
-pMod = tryChoice [ const DoNothingMod <$> symbols "doing nothing"
-                -- TODO
-                 ]
-
-pPred :: Parser Pred
-pPred = tryChoice [ const TruePred <$> symbols "is unconditional"
-                  , IdPred         <$> (symbol "is" >> identifier)
+pMod = tryChoices [ const DoNothingMod <$> symbols "doing nothing"
                  -- TODO
                   ]
+
+pPred :: Parser Pred
+pPred = tryChoices [ const TruePred <$> symbols "is unconditional"
+                   , IdPred         <$> (symbol "is" >> identifier)
+                  -- TODO
+                   ]
