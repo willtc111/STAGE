@@ -51,9 +51,9 @@ ActionDesc := String | ActionDesc if Condition, and otherwise ActionDesc | descr
 
 ClassDecl := Either("A", "An") Id Maybe(has Either(stat, stats) List(Id = Int) and) is described by ThingDesc.
 
-ThingDecl := "Thing" Id is An Id Maybe(with Either(stat, stats) List(Id = Int) Maybe(that contains List(Id)).
+ThingDecl := "Thing" Id is An Id named String Maybe(with Either(stat, stats) List(Id = Int) Maybe(that contains List(Id)).
 
-ActionDecl := "Action" String is available when Condition, modifies player by Mod, modifies current location by Mod before setting location to Id, and is described by ActionDesc.
+ActionDecl := "Action" String is available when Condition, modifies player by Mod, modifies current location by Mod before setting location to Id, and is described by ActionDesc. | "Action" String is available when Condition, ends the game, and is described by ActionDesc.
 
 Decl := ClassDecl | ThingDecl | ActionDecl
 
