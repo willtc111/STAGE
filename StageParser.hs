@@ -9,7 +9,6 @@ import qualified Data.Map.Strict as Map
 import Text.Parsec
 import Data.Functor.Identity
 import Data.Bifunctor
-import Control.Monad
 
 {-
  - For brevity:
@@ -24,39 +23,43 @@ type Parser a = ParsecT String () Identity a
 parseStage :: String -> String -> Either String (PlayerDecl, [Decl])
 parseStage source = bimap show id . parse pStage source
 
-symbols :: String -> Parser ()
-symbols = mapM_ symbol . words
-
 pfChoices :: [Parser a] -> Parser a
 pfChoices = choice . map try
 
-pfList :: Parser a -> Parser (a, [a])
-pfList p = pfChoices [one, two, many]
-  where one = (, []) <$> p
-        two = do first <- p
+pfList :: Parser a -> Parser (a, a, [a])
+pfList p = pfChoices [two, many]
+  where two = do first <- p
                  symbol "and"
                  second <- p
-                 return (first, [second])
-        many = do start <- p
+                 return (first, second, [])
+        many = do first <- p
                   comma
-                  middle <- endBy1 p comma
+                  second <- p
+                  comma
+                  more <- endBy p comma
                   symbol "and"
-                  end <- p
-                  return $ (start, middle ++ [end])
+                  lastOne <- p
+                  return (first, second, more ++ [lastOne])
 
 pfMaybe :: Parser a -> Parser (Maybe a)
 pfMaybe = optionMaybe . try
 
 pAn :: Parser ()
-pAn = void $ pfChoices [symbol "a", symbol "an"]
+pAn = pfChoices [symbols "a", symbols "an"]
 
 pCondition :: Parser Condition
-pCondition = pfChoices [ parens pCondition
-                       , LocationCondition <$> (symbols "the current location" >> pPred)
+pCondition = pfChoices [ LocationCondition <$> (symbols "the current location" >> pPred)
                        , PlayerCondition <$> (symbols "the player" >> pPred)
-                       , liftM2 OrCondition pCondition pCondition
-                       , do (first, rest) <- pfList pCondition
-                            return $ foldr AndCondition first rest
+                       , do symbol "either"
+                            c1 <- pCondition
+                            symbol "or"
+                            c2 <- pCondition
+                            return $ OrCondition c1 c2
+                       , do symbol "both"
+                            c1 <- pCondition
+                            symbol "and"
+                            c2 <- pCondition
+                            return $ AndCondition c1 c2
                        ]
 
 pPred :: Parser Pred
@@ -112,13 +115,12 @@ pActionDecl = pfChoices [pNormalActionDecl, pGameEndDecl]
                                symbols "is available when"
                                condition <- pCondition
                                comma
-                               symbols "modifies player by"
+                               symbols "modifies the player by"
                                modifyPlayer <- pMod
                                comma
-                               symbols "modifies current location by"
+                               symbols "modifies the current location by"
                                modifyCurrentLocation <- pMod
-                               symbols "before setting location to"
-                               newLocation <- identifier
+                               newLocation <- pfMaybe (symbols "before setting the current location to" >> identifier)
                                comma
                                symbols "and is described by"
                                actionDesc <- pActionDesc

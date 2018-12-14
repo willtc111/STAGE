@@ -9,12 +9,33 @@ data Condition = LocationCondition Pred
   deriving (Show)
 
 data Pred = TruePred
-          | IdPred String
-         -- TODO
+          | IdPred Id
+          | ContainsPred Pred
+          | ClassPred Id
+          | StatPred Cmp Int
+          | NotPred Pred
+          | OrPred Pred Pred
+          | AndPred Pred Pred
+  deriving (Show)
+
+data Cmp = EqCmp
+         | NeCmp
+         | LtCmp
+         | LeCmp
+         | GtCmp
+         | GeCmp
   deriving (Show)
 
 data Mod = DoNothingMod
-        -- TODO
+         | SetMod Id Expr
+         | GiveMod Id
+         | TakeMod Id
+         | IfMod Pred Mod Mod
+         | ContainsMod Mod
+         | AndMod Mod Mod
+  deriving (Show)
+
+data Expr = IntExpr Int
   deriving (Show)
 
 data ThingDesc = LiteralTDesc String
@@ -50,7 +71,7 @@ data ActionDecl = ActionDecl
       , condition :: Condition
       , modifyPlayer :: Mod
       , modifyCurrentLocation :: Mod
-      , newLocation :: Id
+      , newLocation :: Maybe Id
       , actionDesc :: ActionDesc
       }
       | GameEndDecl

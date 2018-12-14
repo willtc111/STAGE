@@ -9,6 +9,7 @@ identifier = P.identifier lexer
 stringLiteral = P.stringLiteral lexer
 integer = P.integer lexer
 symbol = P.symbol lexer
+symbols = mapM_ symbol . words
 lexeme = P.lexeme lexer
 whiteSpace = P.whiteSpace lexer
 parens = P.parens lexer

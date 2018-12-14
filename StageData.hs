@@ -4,7 +4,7 @@ import qualified Data.Map.Strict as Map
 
 type Id = String
 type Name = String
-type Stats = Map.Map String Integer
+type Stats = Map.Map Id Integer
 
 data World = World { things :: Map.Map Id Thing
                    , player :: Thing
@@ -20,6 +20,6 @@ data Thing = Thing { name :: Name
                    , describeThing :: World -> String
                    , stats :: Stats
                    , contents :: [Id]
-                   , thingId :: Id -- used in predicates
-                   , thingClass :: Id -- used in predicates
+                   , thingId :: Id
+                   , thingClass :: Id
                    }

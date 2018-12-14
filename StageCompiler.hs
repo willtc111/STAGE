@@ -4,6 +4,7 @@
 module StageCompiler (compileStage) where
 
 import Prelude hiding (pred, mod)
+import StagePreprocessor
 import StageParser
 import StageData hiding (thingId)
 import qualified StageData as SD
@@ -16,8 +17,10 @@ import Control.Monad
 type Fallible = Either String
 
 compileStage :: String -> IO (Fallible (World, Map.Map Name [Action]))
-compileStage source = do parseResult <- parseStage source <$> readFile source
-                         return $ parseResult >>= buildStage
+compileStage source = do sourceContents <- readFile source
+                         return $ do preprocessed <- preprocessStage source sourceContents
+                                     parsed <- parseStage source preprocessed
+                                     buildStage parsed
 
 buildStage :: (PlayerDecl, [Decl]) -> Fallible (World, Map.Map Name [Action])
 buildStage (playerDecl, decls) =
@@ -65,16 +68,19 @@ buildActions :: Set.Set Id -> [ActionDecl] -> Fallible (Map.Map Name [Action])
 buildActions thingIds = buildMapFromDeclsWith $
   \actions decl -> case decl of
     ActionDecl{..} ->
-      do unless (Set.member newLocation thingIds)
-           (fail $ "Unrecognized thing id: " ++ newLocation)
+      do case newLocation of
+           Nothing  -> return ()
+           Just loc -> unless (Set.member loc thingIds)
+                         (fail $ "Unrecognized thing id: " ++ loc)
          shouldRun <- buildCondition thingIds condition
          modifyPlayer' <- buildMod thingIds modifyPlayer
          modifyCurrentLocation' <- buildMod thingIds modifyCurrentLocation
          let updateWorld World{..} =
                do currentLocation <- Map.lookup location things
+                  let location' = fromMaybe location newLocation
                   return World { things = Map.insert location (modifyCurrentLocation' currentLocation) things
                                , player = modifyPlayer' player
-                               , location = newLocation
+                               , location = location'
                                }
          describeAction <- buildActionDesc thingIds actionDesc
          let bucket = fromMaybe [] $ Map.lookup actionName actions
