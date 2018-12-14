@@ -3,7 +3,9 @@ module StageCompilerData where
 import StageData
 
 data Condition = LocationCondition Pred
-              -- TODO
+               | PlayerCondition Pred
+               | OrCondition Condition Condition
+               | AndCondition Condition Condition
   deriving (Show)
 
 data Pred = TruePred
@@ -16,7 +18,7 @@ data Mod = DoNothingMod
   deriving (Show)
 
 data ThingDesc = LiteralTDesc String
-               | IdTDesc
+               | NameTDesc
                | ConcatTDesc [ThingDesc]
               -- TODO
   deriving (Show)
@@ -37,17 +39,23 @@ data Class = Class Stats (Thing -> World -> String)
 data ThingDecl = ThingDecl
       { thingId :: Id
       , thingClass :: Id
+      , name :: Name
       , stats :: Stats
-      , containing :: [Id]
+      , contents :: [Id]
       }
   deriving (Show)
 
 data ActionDecl = ActionDecl
       { actionName :: Name
-      , shouldRun :: Condition
+      , condition :: Condition
       , modifyPlayer :: Mod
       , modifyCurrentLocation :: Mod
       , newLocation :: Id
+      , actionDesc :: ActionDesc
+      }
+      | GameEndDecl
+      { actionName :: Name
+      , condition :: Condition
       , actionDesc :: ActionDesc
       }
   deriving (Show)
@@ -55,11 +63,13 @@ data ActionDecl = ActionDecl
 data Decl = ClassDecl' ClassDecl
           | ThingDecl' ThingDecl
           | ActionDecl' ActionDecl
+  deriving (Show)
 
 data Decls = Decls { classDecls :: [ClassDecl]
                    , thingDecls :: [ThingDecl]
                    , actionDecls :: [ActionDecl]
                    }
+  deriving (Show)
 
 emptyDecls :: Decls
 emptyDecls = Decls { classDecls = []

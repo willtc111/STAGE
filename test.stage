@@ -6,14 +6,14 @@
 
 The player starts in room1 and is described by "You don't question your simple existence.".
 
-A room is described by "You are in " + its id + ". There is a door here.".
-Thing room1 is a room named "Room 1".
-Thing room2 is a room named "Room 2".
+A room is described by "You are in " + its name + ". There is a door here.".
+Location room1 is a room named "Room 1".
+Location room2 is a room named "Room 2".
 
 Action "go through door" is available when location is room1, modifies player by
 doing nothing, modifies current location by doing nothing before setting
-location to room2, and is described by "You move to room2.".
+location to room2, and is described by "You move to Room 2.".
 
 Action "go through door" is available when location is room2, modifies player by
 doing nothing, modifies current location by doing nothing before setting
-location to room1, and is described by "You move to room1.".
+location to room1, and is described by "You move to Room 1.".
