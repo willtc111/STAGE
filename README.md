@@ -22,8 +22,8 @@ Provides auxillary commands such as "help" or "quit" that are not part of the ba
 ## DSL Grammar
 Start = Stage
 
-List(X) := X | X and X | CommaList(X)
-CommaList(X) := X, CommaList(X) | X, and X
+List(X) := X | X and X | X, CommaList(X), and X
+CommaList(X) := X, CommaList(X) | X
 
 Either(X, Y) := X | Y
 
