@@ -57,7 +57,7 @@ pClassDecl = do eitherSymbol "A" "An"
                 return ClassDecl{..}
 
 pThingDecl :: Parser ThingDecl
-pThingDecl = do symbol "Thing"
+pThingDecl = do tryChoices [symbol "Thing", symbol "Location"]
                 thingId <- identifier
                 symbol "is"
                 eitherSymbol "a" "an"
