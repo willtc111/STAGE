@@ -31,23 +31,23 @@ Maybe(X) := Either(X, ε)
 
 An := a | an
 
-Condition := Either(player, location) Pred | Condition or Condition | List(Condition)
+Condition := (Condition) | the Either(player, current location) Pred | Condition or Condition | List(Condition)
 
-Pred := is unconditional | is Maybe(not) Id | does Maybe(not) contain something that Pred | is Maybe(not) An Id | has Stat Cmp Int | Pred or Pred | List(Pred)
+Pred := (Pred) | is unconditional | is Maybe(not) Id | does Maybe(not) contain something that Pred | is Maybe(not) An Id | has Stat Cmp Int | Pred or Pred | List(Pred)
 
 Cmp := = | /= | < | <= | > | >=
 
-Mod := doing nothing | setting Stat to Expr | adding Id | removing Id | Mod if it Pred, and otherwise Mod | modifying everything it contains that Pred by Mod | List(Mod)
+Mod := doing nothing | setting Stat to Expr | adding Id | removing Id | if it Pred then Mod, but Mod otherwise | modifying by Mod everything it contains | List(Mod)
 
-Expr := Int | Int Op Int | Stat | Id.Stat
+Expr := (Expr) | Int | Int Op Int | Stat | Id.Stat
 
 Op := + | - | / | * | %
 
-ThingDesc := String | its name | its Stat | ThingDesc if it Pred, and otherwise ThingDesc | ThingDesc if Condition, and otherwise ThingDesc | for each contained thing, SubThingDesc, separated by String | ThingDesc + ThingDesc
+ThingDesc := String | its name | its Stat | if it Pred then ThingDesc, but ThingDesc otherwise | if Condition then ThingDesc, but ThingDesc otherwise | for each contained thing, SubThingDesc, separated by String | ThingDesc + ThingDesc
 
 SubThingDesc := its description | ThingDesc
 
-ActionDesc := String | ActionDesc if Condition, and otherwise ActionDesc | description of Either(player, location) by ThingDesc | ActionDesc + ActionDesc
+ActionDesc := String | if Condition then ActionDesc, but ActionDesc otherwise | description by ThingDesc of the Either(player, current location) | ActionDesc + ActionDesc
 
 ClassDecl := Either("A", "An") Id Maybe(has Either(stat, stats) List(Id = Int) and) is described by ThingDesc.
 
