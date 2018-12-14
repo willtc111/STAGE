@@ -23,9 +23,6 @@ type Parser a = ParsecT String () Identity a
 parseStage :: String -> String -> Either String (PlayerDecl, [Decl])
 parseStage source = bimap show id . parse pStage source
 
-symbols :: String -> Parser ()
-symbols = mapM_ symbol . words
-
 pfChoices :: [Parser a] -> Parser a
 pfChoices = choice . map try
 
@@ -51,12 +48,18 @@ pAn :: Parser ()
 pAn = pfChoices [symbols "a", symbols "an"]
 
 pCondition :: Parser Condition
-pCondition = pfChoices [ parens pCondition
-                       , LocationCondition <$> (symbols "the current location" >> pPred)
+pCondition = pfChoices [ LocationCondition <$> (symbols "the current location" >> pPred)
                        , PlayerCondition <$> (symbols "the player" >> pPred)
-                       , OrCondition <$> pCondition <*> pCondition
-                       , do (first, second, rest) <- pfList pCondition
-                            return $ foldr AndCondition first (second:rest)
+                       , do symbol "either"
+                            c1 <- pCondition
+                            symbol "or"
+                            c2 <- pCondition
+                            return $ OrCondition c1 c2
+                       , do symbol "both"
+                            c1 <- pCondition
+                            symbol "and"
+                            c2 <- pCondition
+                            return $ AndCondition c1 c2
                        ]
 
 pPred :: Parser Pred
@@ -112,13 +115,12 @@ pActionDecl = pfChoices [pNormalActionDecl, pGameEndDecl]
                                symbols "is available when"
                                condition <- pCondition
                                comma
-                               symbols "modifies player by"
+                               symbols "modifies the player by"
                                modifyPlayer <- pMod
                                comma
-                               symbols "modifies current location by"
+                               symbols "modifies the current location by"
                                modifyCurrentLocation <- pMod
-                               symbols "before setting location to"
-                               newLocation <- identifier
+                               newLocation <- pfMaybe (symbols "before setting the current location to" >> identifier)
                                comma
                                symbols "and is described by"
                                actionDesc <- pActionDesc

@@ -71,7 +71,7 @@ data ActionDecl = ActionDecl
       , condition :: Condition
       , modifyPlayer :: Mod
       , modifyCurrentLocation :: Mod
-      , newLocation :: Id
+      , newLocation :: Maybe Id
       , actionDesc :: ActionDesc
       }
       | GameEndDecl

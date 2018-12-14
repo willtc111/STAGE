@@ -1,22 +1,28 @@
-module StagePreprocessor (preprocesssStage) where
+module StagePreprocessor (preprocessStage) where
 
 import StageLexer
 import Text.Parsec
+import Text.Parsec.Char
 import Data.Functor.Identity
+import Data.Bifunctor
 
 type Parser a = ParsecT String () Identity a
 
-preprocessStage :: String -> String -> Either ParseError String
-preprocessStage source = parse pSubstitute source
+preprocessStage :: String -> String -> Either String String
+preprocessStage source = bimap show id . parse pMacroExpand source
 
 
-pSubstitute :: Parser String
-pSubstitute = do processed <- choice [pMovingStatement, anyToken]
-                 remainder <- pSubstitute
-                 return processed ++ remainder
+pMacroExpand :: Parser String
+pMacroExpand = do macroExpansions <- many $ choice $ map try macros
+                  eof
+                  return $ concat macroExpansions
+  where macros = [ pMovingDecl
+                 , pAlwaysAvailable
+                 , (:[]) <$> anyChar
+                 ]
 
-pMovingStatement :: Parser String
-pMovingStatement =
+pMovingDecl :: Parser String
+pMovingDecl =
   do symbols "Moving from"
      roomFrom <- identifier
      symbol "to"
@@ -25,9 +31,20 @@ pMovingStatement =
      actionName <- stringLiteral
      symbols "and described by"
      desc <- stringLiteral
-     dot
-     return "Action \"" ++ actionName ++ "\" is available when location is "
-            ++ roomFrom ++ ", modifies player by doing nothing, "
-            ++ "modifies current location my doing nothing "
-            ++ "before setting location to " ++ roomTo ++ ", "
-            ++ "and is described by \"" ++ desc ++ "\"."
+     string "."
+     return $ concat [ "Action \""
+                     , actionName
+                     , "\" is available when the current location is "
+                     , roomFrom
+                     , ", modifies the player by doing nothing, "
+                     , "modifies the current location by doing nothing "
+                     , "before setting the current location to "
+                     , roomTo
+                     , ", "
+                     , "and is described by \""
+                     , desc
+                     , "\"."
+                     ]
+
+pAlwaysAvailable :: Parser String
+pAlwaysAvailable = symbols "is always available" >> return "is available when the player is unconditional"

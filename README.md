@@ -33,13 +33,15 @@ An := a | an
 
 Stats := Either(stat Id = Int, stats List(Id = Int))
 
-Condition := (Condition) | the Either(player, current location) Pred | Condition or Condition | List(Condition)
+Things := Either(thing Id, things List(Id))
 
-Pred := (Pred) | is unconditional | is Maybe(not) Id | does Maybe(not) contain something that Pred | is Maybe(not) An Id | has Id Cmp Expr | Pred or Pred | List(Pred)
+Condition := the Either(player, current location) Pred | either Condition or Condition | both Condition and Condition
+
+Pred := is unconditional | is Maybe(not) thing Id | does Maybe(not) contain something that Pred | is Maybe(not) An Id | has Id Cmp Expr | either Pred or Pred | both Pred and Pred
 
 Cmp := = | /= | < | <= | > | >=
 
-Mod := doing nothing | setting its Id to Expr | giving it Id | taking Id from it | if it Pred then Mod, but Mod otherwise | modifying by Mod everything it contains | List(Mod)
+Mod := doing nothing | setting its Id to Expr | giving it Id | taking Id from it | if it Pred then Mod, but Mod otherwise | modifying by Mod everything it contains | first Mod and then Mod
 
 Expr := (Expr) | Int | Int Op Int | Id | Id.Id | player.Id
 
@@ -53,14 +55,14 @@ ActionDesc := String | if Condition then ActionDesc, but ActionDesc otherwise | 
 
 ClassDecl := Either("A", "An") Id Maybe(has Stats and) is described by ThingDesc.
 
-ThingDecl := Either("Thing", "Location") Id is An Id named String Maybe(with Stats) Maybe(that contains Either(Id, List(Id))).
+ThingDecl := Either("Thing", "Location") Id is An Id named String Maybe(with Stats) Maybe(that contains Things).
 
-ActionDecl := "Action" String is available when Condition, modifies player by Mod, modifies current location by Mod before setting location to Id, and is described by ActionDesc. | "Action" String is available when Condition, ends the game, and is described by ActionDesc.
+ActionDecl := "Action" String is available when Condition, modifies the player by Mod, modifies the current location by Mod Maybe(before setting the current location to Id), and is described by ActionDesc. | "Action" String is available when Condition, ends the game, and is described by ActionDesc.
 
 Decl := ClassDecl | ThingDecl | ActionDecl
 
 Decls := Maybe(Decls Decl)
 
-PlayerDecl := "The" player Maybe(has Stats and) Maybe(has Either(thing Id, things List(Id)) and) starts in Id and is described by ThingDesc.
+PlayerDecl := "The" player Maybe(has Stats and) Maybe(has Things and) starts in Id and is described by ThingDesc.
 
 Stage := Decls PlayerDecl Decls
