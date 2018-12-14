@@ -19,9 +19,7 @@ outputThing world thing = putStrLn (describeThing thing world)
 
 
 outputAction :: World -> Action -> IO ()
-outputAction world action = case (describeAction action world) of
-                              Nothing -> return ()
-                              Just description -> putStrLn description
+outputAction world action = putStrLn (describeAction action world)
 
 
 getActionInput :: (Set.Set Name) -> IO (Maybe Name)

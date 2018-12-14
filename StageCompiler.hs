@@ -65,5 +65,5 @@ buildThingDesc IdTDesc             = \Thing{..} _ -> thingId
 buildThingDesc (ConcatTDesc descs) = foldr aux (\_ _ -> "") $ map buildThingDesc descs
   where aux d1 d2 = \thing world -> d1 thing world ++ d2 thing world
 
-buildActionDesc :: ActionDesc -> World -> Maybe String
-buildActionDesc (LiteralADesc s) = const $ Just s
+buildActionDesc :: ActionDesc -> World -> String
+buildActionDesc (LiteralADesc s) = const s
