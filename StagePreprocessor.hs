@@ -18,6 +18,7 @@ pMacroExpand = do macroExpansions <- many $ choice $ map try macros
                   return $ concat macroExpansions
   where macros = [ pMovingDecl
                  , pAlwaysAvailable
+                 , pLocation
                  , (:[]) <$> anyChar
                  ]
 
@@ -48,3 +49,9 @@ pMovingDecl =
 
 pAlwaysAvailable :: Parser String
 pAlwaysAvailable = symbols "is always available" >> return "is available when the player is unconditional"
+
+pLocation :: Parser String
+pLocation = do symbol "Location"
+               loc <- identifier
+               symbol "is"
+               return $ "Thing " ++ loc ++ " is "
