@@ -97,7 +97,7 @@ pClassDecl = do pfChoices [symbol "A", symbol "An"]
                 return ClassDecl{..}
 
 pThingDecl :: Parser ThingDecl
-pThingDecl = do pfChoices [symbol "Thing", symbol "Location"]
+pThingDecl = do symbol "Thing"
                 thingId <- identifier
                 symbol "is"
                 pAn
