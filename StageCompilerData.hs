@@ -36,6 +36,13 @@ data Mod = DoNothingMod
   deriving (Show)
 
 data Expr = IntExpr Int
+          | OpExpr Expr Op Expr
+          | StatExpr Id
+          | ThingStatExpr Id Id
+          | PlayerStatExpr Id
+  deriving (Show)
+
+data Op = Add | Sub | Mul | Div | Mod
   deriving (Show)
 
 data ThingDesc = LiteralTDesc String

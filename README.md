@@ -16,7 +16,7 @@ Executes action commands from the UI to update the state of the world/player
 ### User Interface
 Provides output of what happens in the game
 Takes input from the player in the form of text commands
-Provides auxillary commands such as "help" or "quit" that are not part of the base game
+Provides auxiliary commands such as "help" or "quit" that are not part of the base game
 
 
 ## DSL Grammar
@@ -43,9 +43,9 @@ Cmp := = | /= | < | <= | > | >=
 
 Mod := doing nothing | setting its Id to Expr | giving it Id | taking Id from it | if it Pred then Mod, but Mod otherwise | modifying by Mod everything it contains | first Mod and then Mod
 
-Expr := (Expr) | Int | Int Op Int | Id | Id.Id | player.Id
+Expr := (Expr) | Int | Expr Op Expr | Id | Id.Id | player.Id
 
-Op := + | - | / | * | %
+Op := + | - | * | / | %
 
 ThingDesc := String | its name | its Id | if it Pred then ThingDesc, but ThingDesc otherwise | if Condition then ThingDesc, but ThingDesc otherwise | for each contained thing, SubThingDesc, separated by String | ThingDesc + ThingDesc
 
