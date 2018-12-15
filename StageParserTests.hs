@@ -113,15 +113,16 @@ actionDescD :: SCD.ActionDesc -> Doc
 actionDescD = undefined
 
 classDeclD :: SCD.ClassDecl -> Doc
-classDeclD cls = text "A"
-                 <+> idD (SCD.classId cls)
-                 <+> if null (SCD.classStats cls)
-                       then empty
-                       else text "has"
-                            <+> statsD (SCD.classStats cls)
-                            <+> text "and"
-                <+> text "is described by"
-                <+> thingDescD (SCD.classDesc cls)
+classDeclD SCD.ClassDecl{..} =
+  text "A"
+  <+> idD classId
+  <+> if null classStats
+        then empty
+        else text "has"
+             <+> statsD classStats
+             <+> text "and"
+  <+> text "is described by"
+  <+> thingDescD classDesc
 
 thingThingDeclD :: SCD.ThingDecl -> Doc
 thingThingDeclD thing = thingDeclD "Thing" thing
@@ -130,17 +131,17 @@ locationThingDeclD :: SCD.ThingDecl -> Doc
 locationThingDeclD thing = thingDeclD "Location" thing
 
 thingDeclD :: String -> SCD.ThingDecl -> Doc
-thingDeclD kind thing = text kind
-                        <+> idD (SCD.thingId thing)
+thingDeclD kind SCD.ThingDecl{..} = text kind
+                        <+> idD thingId
                         <+> text "is a"
-                        <+> idD (SCD.thingClass thing)
-                        <+> text "named" <+> nameD (SCD.name thing)
-                        <+> if null (SCD.stats thing)
+                        <+> idD thingClass
+                        <+> text "named" <+> nameD name
+                        <+> if null stats
                               then empty
-                              else text "with" <+> statsD (SCD.stats thing)
-                        <+> if null (SCD.contents thing)
+                              else text "with" <+> statsD stats
+                        <+> if null contents
                               then empty
-                              else text "that contains" <+> thingsD (SCD.contents thing)
+                              else text "that contains" <+> thingsD contents
 
 
 thingsD :: [SD.Id] -> Doc
@@ -181,11 +182,11 @@ declD (SCD.ThingDecl' tDecl)  = thingThingDeclD tDecl
 declD (SCD.ActionDecl' aDecl) = actionDeclD aDecl
 
 declsD :: SCD.Decls -> Doc
-declsD decls = classDeclsD $$ thingDeclsD $$ actionDeclsD
+declsD SCD.Decls{..} = classDeclsD $$ thingDeclsD $$ actionDeclsD
   where
-    classDeclsD = fsep $ fmap classDeclD (SCD.classDecls decls)
-    thingDeclsD = fsep $ fmap thingThingDeclD (SCD.thingDecls decls)
-    actionDeclsD = fsep $ fmap actionDeclD (SCD.actionDecls decls)
+    classDeclsD = fsep $ fmap classDeclD classDecls
+    thingDeclsD = fsep $ fmap thingThingDeclD thingDecls
+    actionDeclsD = fsep $ fmap actionDeclD actionDecls
 
 playerDeclD :: SCD.PlayerDecl -> Doc
 playerDeclD SCD.PlayerDecl{..} =
