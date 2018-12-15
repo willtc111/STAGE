@@ -12,7 +12,7 @@ data Pred = TruePred
           | IdPred Id
           | ContainsPred Pred
           | ClassPred Id
-          | StatPred Cmp Int
+          | StatPred Id Cmp Expr
           | NotPred Pred
           | OrPred Pred Pred
           | AndPred Pred Pred
