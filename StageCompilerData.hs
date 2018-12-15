@@ -36,6 +36,7 @@ data Mod = DoNothingMod
   deriving (Show)
 
 data Expr = IntExpr Int
+          | NegExpr
           | OpExpr Expr Op Expr
           | StatExpr Id
           | ThingStatExpr Id Id
