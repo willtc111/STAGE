@@ -14,6 +14,10 @@ import Test.QuickCheck
 import Test.QuickCheck.Instances
 import Control.Monad
 
+{- Tests -}
+
+
+
 
 {- Generators -}
 
@@ -68,7 +72,9 @@ genPred = oneof [(return SCD.TruePred),
                  (liftM SCD.ContainsPred genPred),
                  (liftM SCD.ClassPred genId),
                  (liftM3 SCD.StatPred genId genCmp genExpr),
-                 (liftM SCD.NotPred genPred),
+                 (liftM SCD.NotPred (oneof [(liftM SCD.IdPred genId),
+                                            (liftM SCD.ContainsPred genPred),
+                                            (liftM SCD.ClassPred genId)])),
                  (liftM2 SCD.OrPred genPred genPred),
                  (liftM2 SCD.AndPred genPred genPred)]
 
@@ -124,13 +130,13 @@ instance Arbitrary SCD.Op where
 
 
 genThingDesc :: Gen SCD.ThingDesc
-genThingDesc = oneof [(liftM SCD.LiteralTDesc genAlphaNumString),
-                      (return SCD.NameTDesc),
-                      (liftM SCD.StatTDesc genId),
-                      (liftM3 SCD.IfPTDesc genPred genThingDesc genThingDesc),
-                      (liftM3 SCD.IfCTDesc genCondition genThingDesc genThingDesc),
-                      (liftM2 SCD.ContainedTDesc genSubThingDesc genAlphaNumString),
-                      (liftM SCD.ConcatTDesc (listOf genThingDesc))]
+genThingDesc = frequency [(25, liftM SCD.LiteralTDesc genAlphaNumString),
+                          (25, return SCD.NameTDesc),
+                          (25, liftM SCD.StatTDesc genId),
+                          (5,  liftM3 SCD.IfPTDesc genPred genThingDesc genThingDesc),
+                          (5,  liftM3 SCD.IfCTDesc genCondition genThingDesc genThingDesc),
+                          (14, liftM2 SCD.ContainedTDesc genSubThingDesc genAlphaNumString),
+                          (1,  liftM SCD.ConcatTDesc (listOf genThingDesc))]
 
 instance Arbitrary SCD.ThingDesc where
   arbitrary = genThingDesc
@@ -145,11 +151,11 @@ instance Arbitrary SCD.SubThingDesc where
 
 
 genActionDesc :: Gen SCD.ActionDesc
-genActionDesc = oneof [(liftM SCD.LiteralADesc genAlphaNumString),
-                       (liftM3 SCD.IfADesc genCondition genActionDesc genActionDesc),
-                       (liftM SCD.PlayerADesc genSubThingDesc),
-                       (liftM SCD.LocationADesc genSubThingDesc),
-                       (liftM SCD.ConcatADesc (listOf genActionDesc))]
+genActionDesc = frequency [(49, liftM SCD.LiteralADesc genAlphaNumString),
+                           (10, liftM3 SCD.IfADesc genCondition genActionDesc genActionDesc),
+                           (20, liftM SCD.PlayerADesc genSubThingDesc),
+                           (20, liftM SCD.LocationADesc genSubThingDesc),
+                           (1,  liftM SCD.ConcatADesc (listOf genActionDesc))]
 
 instance Arbitrary SCD.ActionDesc where
   arbitrary = genActionDesc
@@ -293,31 +299,31 @@ predD p = case p of
             _           -> aux True p
   where
     aux :: Bool -> SCD.Pred -> Doc
-    aux _ (SCD.TruePred)            = text "is unconditional"
-    aux n (SCD.IdPred id)           = text "is"
-                                      <+> if n then empty else text "not"
-                                      <+> text "thing"
-                                      <+> idD id
-    aux n (SCD.ContainsPred pred)   = text "does"
-                                      <+> if n then empty else text "not"
-                                      <+> text "contain something that"
-                                      <+> predD pred
-    aux n (SCD.ClassPred id)        = text "is"
-                                      <+> if n then empty else text "not"
-                                      <+> text "a"
-                                      <+> idD id
-    aux n (SCD.StatPred id cmp expr)   = text "has"
-                                      <+> idD id
-                                      <+> cmpD cmp
-                                      <+> exprD expr
-    aux n (SCD.OrPred pred1 pred2)  = text "either"
-                                      <+> predD pred1
-                                      <+> text "or"
-                                      <+> predD pred2
-    aux n (SCD.AndPred pred1 pred2) = text "both"
-                                      <+> predD pred1
-                                      <+> text "and"
-                                      <+> predD pred2
+    aux _ (SCD.TruePred)             = text "is unconditional"
+    aux n (SCD.IdPred id)            = text "is"
+                                       <+> (if n then empty else text "not")
+                                       <+> text "thing"
+                                       <+> idD id
+    aux n (SCD.ContainsPred pred)    = text "does"
+                                       <+> (if n then empty else text "not")
+                                       <+> text "contain something that"
+                                       <+> predD pred
+    aux n (SCD.ClassPred id)         = text "is"
+                                       <+> (if n then empty else text "not")
+                                       <+> text "a"
+                                       <+> idD id
+    aux n (SCD.StatPred id cmp expr) = text "has"
+                                       <+> idD id
+                                       <+> cmpD cmp
+                                       <+> exprD expr
+    aux n (SCD.OrPred pred1 pred2)   = text "either"
+                                       <+> predD pred1
+                                       <+> text "or"
+                                       <+> predD pred2
+    aux n (SCD.AndPred pred1 pred2)  = text "both"
+                                       <+> predD pred1
+                                       <+> text "and"
+                                       <+> predD pred2
 
 
 cmpD :: SCD.Cmp -> Doc
@@ -326,7 +332,7 @@ cmpD SCD.NeCmp = text "/="
 cmpD SCD.LtCmp = text "<"
 cmpD SCD.LeCmp = text "<="
 cmpD SCD.GtCmp = text ">"
-cmpd SCD.GeCmp = text ">="
+cmpD SCD.GeCmp = text ">="
 
 
 modD :: SCD.Mod -> Doc
@@ -450,7 +456,7 @@ classDeclD SCD.ClassDecl{..} =
              <+> text "and"
   <+> text "is described by"
   <+> thingDescD classDesc
-  <+> text "."
+  <> text "."
 
 thingThingDeclD :: SCD.ThingDecl -> Doc
 thingThingDeclD thing = thingDeclD "Thing" thing
@@ -471,7 +477,7 @@ thingDeclD kind SCD.ThingDecl{..} =
   <+> if null contents
         then empty
         else text "that contains" <+> thingsD contents
-  <+> text "."
+  <> text "."
 
 
 thingsD :: Set.Set SD.Id -> Doc
@@ -506,7 +512,7 @@ actionDeclD SCD.GameEndDecl{..} =
   <+> conditionD condition
   <> text ", ends the game, and is described by"
   <+> actionDescD actionDesc
-  <+> text "."
+  <> text "."
 
 
 declD :: SCD.Decl -> Doc
@@ -538,13 +544,13 @@ playerDeclD SCD.PlayerDecl{..} =
   <+> idD playerStart
   <+> text "and is described by"
   <+> thingDescD playerDesc
-  <+> text "."
+  <> text "."
 
 worldDescDeclD :: SCD.WorldDescDecl -> Doc
 worldDescDeclD (SCD.WorldDescDecl actDesc) =
   text "The game state is described by"
   <+> actionDescD actDesc
-  <+> text "."
+  <> text "."
 
 stageD :: SCD.Stage -> Doc
 stageD SCD.Stage{..} = (fsep $ fmap declD firstDeclList)
