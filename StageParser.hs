@@ -7,6 +7,7 @@ import StageCompilerData
 import StageLexer
 import qualified Data.Map.Strict as Map
 import Text.Parsec
+import Text.Parsec.Expr
 import Data.Functor.Identity
 import Data.Bifunctor
 
@@ -63,15 +64,48 @@ pCondition = pfChoices [ LocationCondition <$> (symbols "the current location" >
                        ]
 
 pPred :: Parser Pred
-pPred = pfChoices [ const TruePred <$> symbols "is unconditional"
-                  , IdPred         <$> (symbol "is" >> identifier)
-                 -- TODO
+pPred = pfChoices [ TruePred               <$  symbols "is unconditional"
+                  , IdPred                 <$> (symbol "is" >> identifier)
+                  , NotPred . IdPred       <$> (symbol "is not" >> identifier)
+                  , ContainsPred           <$> (symbols "does contain something that" >> pPred)
+                  , NotPred . ContainsPred <$> (symbols "does not contain something that" >> pPred)
+                  , ClassPred              <$> (symbol "is" >> pAn >> identifier)
+                  , NotPred . ClassPred    <$> (symbols "is not" >> pAn >> identifier)
+                  , StatPred               <$> (symbol "has" >> identifier) <*> pCmp <*> pExpr
+                  , OrPred                 <$> (symbol "either" >> pPred) <*> (symbol "or" >> pPred)
+                  , AndPred                <$> (symbol "both" >> pPred) <*> (symbol "and" >> pPred)
                   ]
+
+pCmp :: Parser Cmp
+pCmp = pfChoices [ EqCmp <$ symbol "="
+                 , NeCmp <$ symbol "/="
+                 , LtCmp <$ symbol "<"
+                 , LeCmp <$ symbol "<="
+                 , GtCmp <$ symbol ">"
+                 , GeCmp <$ symbol ">="
+                 ]
 
 pMod :: Parser Mod
 pMod = pfChoices [ const DoNothingMod <$> symbols "doing nothing"
                 -- TODO
                  ]
+
+pExpr :: Parser Expr
+pExpr = buildExpressionParser table pTerm
+  where pTerm = pfChoices [ parens pExpr
+                          , NumExpr <$> natural
+                          , StatExpr <$> (symbol "its" >> identifier)
+                          , do thing <- identifier
+                               symbol "'s"
+                               stat <- identifier
+                               return $ ThingStatExpr thing stat
+                          , PlayerStatExpr <$> (symbols "the player's" >> identifier)
+                          ]
+        table = [ [Prefix $ symbol "-" >> return NegExpr]
+                , [op "*" Mul, op "/" Div, op "%" Mod]
+                , [op "+" Add, op "-" Sub]
+                ]
+        op s o = Infix (symbol s >> return (flip OpExpr o)) AssocLeft
 
 pThingDesc :: Parser ThingDesc
 pThingDesc = concatTDesc <$> sepBy1 pThingDescNoConcat (symbol "+")

@@ -43,7 +43,7 @@ Cmp := = | /= | < | <= | > | >=
 
 Mod := doing nothing | setting its Id to Expr | giving it Id | taking Id from it | if it Pred then Mod, but Mod otherwise | modifying by Mod everything it contains | first Mod and then Mod
 
-Expr := (Expr) | Int | -Expr | Expr Op Expr | its Id | Id's Id | the player's Id
+Expr := (Expr) | Nat | -Expr | Expr Op Expr | its Id | Id's Id | the player's Id
 
 Op := + | - | * | / | %
 

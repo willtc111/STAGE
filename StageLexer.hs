@@ -1,12 +1,14 @@
 module StageLexer where
 
+import Text.Parsec
 import qualified Text.Parsec.Token as P
 import Text.Parsec.Language
 
-lexer = P.makeTokenParser haskellStyle
+lexer = P.makeTokenParser haskellStyle{P.identLetter = alphaNum <|> char '_'}
 
 identifier = P.identifier lexer
 stringLiteral = P.stringLiteral lexer
+natural = P.natural lexer
 integer = P.integer lexer
 symbol = P.symbol lexer
 symbols = mapM_ symbol . words
