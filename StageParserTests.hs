@@ -107,7 +107,7 @@ genClassDecl = do classId <- genId
                   classDesc <- genThingDesc
                   return SCD.ClassDecl{..}
 
-genThings :: Gen (Set.Set SD.Id)
+genThings :: Gen SD.Things
 genThings = Set.fromList <$> listOf genId
 
 genThingDecl :: Gen SCD.ThingDecl
@@ -138,10 +138,31 @@ genActionDecl = oneof [
 genDecl :: Gen SCD.Decl
 genDecl = oneof [(liftM SCD.ClassDecl' genClassDecl),
                  (liftM SCD.ThingDecl' genThingDecl),
-                 (liftM SCD.ACtionDecl' genActionDecl)]
+                 (liftM SCD.ActionDecl' genActionDecl)]
+
+genDecls :: Gen SCD.Decls
+genDecls = do classDecls <- listOf genClassDecl
+              thingDecls <- listOf genThingDecl
+              actionDecls <- listOf genActionDecl
+              return SCD.Decls{..}
+
+genPlayerDecl :: Gen SCD.PlayerDecl
+genPlayerDecl = do playerStats <- genStats
+                   playerThings <- genThings
+                   playerStart <- genId
+                   playerDesc <- genThingDesc
+                   return SCD.PlayerDecl{..}
+
+genWorldDescDecl :: Gen SCD.WorldDescDecl
+genWorldDescDecl = liftM SCD.WorldDescDecl genActionDesc
+
+genStage :: Gen SCD.Stage
+genStage = do decls <- listOf genDecl
+              playerDecl <- genPlayerDecl
+              worldDescDecl <- genWorldDescDecl
+              return SCD.Stage{..}
 
 
--- todo decls
 
 
 {- Pretty printers -}
@@ -267,6 +288,7 @@ classDeclD SCD.ClassDecl{..} =
              <+> text "and"
   <+> text "is described by"
   <+> thingDescD classDesc
+  <+> text "."
 
 thingThingDeclD :: SCD.ThingDecl -> Doc
 thingThingDeclD thing = thingDeclD "Thing" thing
@@ -275,17 +297,19 @@ locationThingDeclD :: SCD.ThingDecl -> Doc
 locationThingDeclD thing = thingDeclD "Location" thing
 
 thingDeclD :: String -> SCD.ThingDecl -> Doc
-thingDeclD kind SCD.ThingDecl{..} = text kind
-                        <+> idD thingId
-                        <+> text "is a"
-                        <+> idD thingClass
-                        <+> text "named" <+> nameD name
-                        <+> if null stats
-                              then empty
-                              else text "with" <+> statsD stats
-                        <+> if null contents
-                              then empty
-                              else text "that contains" <+> thingsD contents
+thingDeclD kind SCD.ThingDecl{..} =
+  text kind
+  <+> idD thingId
+  <+> text "is a"
+  <+> idD thingClass
+  <+> text "named" <+> nameD name
+  <+> if null stats
+        then empty
+        else text "with" <+> statsD stats
+  <+> if null contents
+        then empty
+        else text "that contains" <+> thingsD contents
+  <+> text "."
 
 
 thingsD :: Set.Set SD.Id -> Doc
@@ -313,7 +337,6 @@ actionDeclD SCD.ActionDecl{..} =
   <> text ", and is described by"
   <+> actionDescD actionDesc
   <> text "."
--- actionName condition actionDesc
 actionDeclD SCD.GameEndDecl{..} = 
   text "Action"
   <+> nameD actionName
@@ -321,6 +344,7 @@ actionDeclD SCD.GameEndDecl{..} =
   <+> conditionD condition
   <> text ", ends the game, and is described by"
   <+> actionDescD actionDesc
+  <+> text "."
 
 
 declD :: SCD.Decl -> Doc
@@ -329,7 +353,7 @@ declD (SCD.ThingDecl' tDecl)  = thingThingDeclD tDecl
 declD (SCD.ActionDecl' aDecl) = actionDeclD aDecl
 
 declsD :: SCD.Decls -> Doc
-declsD SCD.Decls{..} = classDeclsD $$ thingDeclsD $$ actionDeclsD
+declsD SCD.Decls{..} = classDeclsD $+$ thingDeclsD $+$ actionDeclsD
   where
     classDeclsD = fsep $ fmap classDeclD classDecls
     thingDeclsD = fsep $ fmap thingThingDeclD thingDecls
@@ -353,3 +377,28 @@ playerDeclD SCD.PlayerDecl{..} =
   <+> text "and is described by"
   <+> thingDescD playerDesc
   <+> text "."
+
+worldDescDeclD :: SCD.WorldDescDecl -> Doc
+worldDescDeclD (SCD.WorldDescDecl actDesc) =
+  text "The game state is described by"
+  <+> actionDescD actDesc
+  <+> text "."
+
+stageD :: SCD.Stage -> Doc
+stageD SCD.Stage{..} = (fsep $ fmap declD firstDeclList)
+                       $+$ if playerDeclFirst
+                             then playerDeclD playerDecl
+                                  $+$ (fsep $ fmap declD middleDeclList)
+                                  $+$ worldDescDeclD worldDescDecl
+                             else worldDescDeclD worldDescDecl
+                                  $+$ (fsep $ fmap declD middleDeclList)
+                                  $+$ playerDeclD playerDecl
+                       $+$ (fsep $ fmap declD lastDeclList)
+  where firstDeclList = take 1 decls
+        middleDeclList = take 1 (drop 1 decls)
+        lastDeclList = drop 2 decls
+        playerDeclFirst = (length decls) `mod` 2 == 0
+
+
+
+
