@@ -48,11 +48,19 @@ genStats = Map.fromList <$> genStatList
     genStat :: Gen (SD.Id, Integer)
     genStat = liftM2 (,) genId (arbitrary :: Gen Integer)
 
+genThings :: Gen SD.Things
+genThings = Set.fromList <$> listOf genId
+
+
 genCondition :: Gen SCD.Condition
 genCondition = oneof [(liftM SCD.LocationCondition genPred),
                       (liftM SCD.PlayerCondition genPred),
                       (liftM2 SCD.OrCondition genCondition genCondition),
                       (liftM2 SCD.AndCondition genCondition genCondition)]
+
+instance Arbitrary SCD.Condition where
+  arbitrary = genCondition
+
 
 genPred :: Gen SCD.Pred
 genPred = oneof [(return SCD.TruePred),
@@ -64,6 +72,10 @@ genPred = oneof [(return SCD.TruePred),
                  (liftM2 SCD.OrPred genPred genPred),
                  (liftM2 SCD.AndPred genPred genPred)]
 
+instance Arbitrary SCD.Pred where
+  arbitrary = genPred
+
+
 genCmp :: Gen SCD.Cmp
 genCmp = oneof [(return SCD.EqCmp),
                 (return SCD.NeCmp),
@@ -71,6 +83,10 @@ genCmp = oneof [(return SCD.EqCmp),
                 (return SCD.LeCmp),
                 (return SCD.GtCmp),
                 (return SCD.GeCmp)]
+
+instance Arbitrary SCD.Cmp where
+  arbitrary = genCmp
+
 
 genMod :: Gen SCD.Mod
 genMod = oneof [(return SCD.DoNothingMod),
@@ -80,6 +96,10 @@ genMod = oneof [(return SCD.DoNothingMod),
                 (liftM3 SCD.IfMod genPred genMod genMod),
                 (liftM2 SCD.AndMod genMod genMod)]
 
+instance Arbitrary SCD.Mod where
+  arbitrary = genMod
+
+
 genExpr :: Gen SCD.Expr
 genExpr = oneof [(liftM SCD.NumExpr (arbitrary :: Gen Integer)),
                  (liftM SCD.NegExpr genExpr),
@@ -88,6 +108,10 @@ genExpr = oneof [(liftM SCD.NumExpr (arbitrary :: Gen Integer)),
                  (liftM2 SCD.ThingStatExpr genId genId),
                  (liftM SCD.PlayerStatExpr genId)]
 
+instance Arbitrary SCD.Expr where
+  arbitrary = genExpr
+
+
 genOp :: Gen SCD.Op
 genOp = oneof [(return SCD.Add),
                (return SCD.Sub),
@@ -95,11 +119,41 @@ genOp = oneof [(return SCD.Add),
                (return SCD.Div),
                (return SCD.Mod)]
 
+instance Arbitrary SCD.Op where
+  arbitrary = genOp
+
+
 genThingDesc :: Gen SCD.ThingDesc
-genThingDesc = undefined -- TODO
+genThingDesc = oneof [(liftM SCD.LiteralTDesc genAlphaNumString),
+                      (return SCD.NameTDesc),
+                      (liftM SCD.StatTDesc genId),
+                      (liftM3 SCD.IfPTDesc genPred genThingDesc genThingDesc),
+                      (liftM3 SCD.IfCTDesc genCondition genThingDesc genThingDesc),
+                      (liftM2 SCD.ContainedTDesc genSubThingDesc genAlphaNumString),
+                      (liftM SCD.ConcatTDesc (listOf genThingDesc))]
+
+instance Arbitrary SCD.ThingDesc where
+  arbitrary = genThingDesc
+
+
+genSubThingDesc :: Gen SCD.SubThingDesc
+genSubThingDesc = oneof [(return SCD.DefaultSubTDesc),
+                         (liftM SCD.CustomSubTDesc genThingDesc)]
+
+instance Arbitrary SCD.SubThingDesc where
+  arbitrary = genSubThingDesc
+
 
 genActionDesc :: Gen SCD.ActionDesc
-genActionDesc = undefined -- TODO
+genActionDesc = oneof [(liftM SCD.LiteralADesc genAlphaNumString),
+                       (liftM3 SCD.IfADesc genCondition genActionDesc genActionDesc),
+                       (liftM SCD.PlayerADesc genSubThingDesc),
+                       (liftM SCD.LocationADesc genSubThingDesc),
+                       (liftM SCD.ConcatADesc (listOf genActionDesc))]
+
+instance Arbitrary SCD.ActionDesc where
+  arbitrary = genActionDesc
+
 
 genClassDecl :: Gen SCD.ClassDecl
 genClassDecl = do classId <- genId
@@ -107,8 +161,9 @@ genClassDecl = do classId <- genId
                   classDesc <- genThingDesc
                   return SCD.ClassDecl{..}
 
-genThings :: Gen SD.Things
-genThings = Set.fromList <$> listOf genId
+instance Arbitrary SCD.ClassDecl where
+  arbitrary = genClassDecl
+
 
 genThingDecl :: Gen SCD.ThingDecl
 genThingDecl = do thingId <- genId
@@ -117,6 +172,10 @@ genThingDecl = do thingId <- genId
                   stats <- genStats
                   contents <- genThings
                   return SCD.ThingDecl{..}
+
+instance Arbitrary SCD.ThingDecl where
+  arbitrary = genThingDecl
+
 
 genActionDecl :: Gen SCD.ActionDecl
 genActionDecl = oneof [
@@ -135,16 +194,28 @@ genActionDecl = oneof [
     genMaybeId :: Gen (Maybe SD.Id)
     genMaybeId = oneof [(Just <$> genId), (return Nothing)]
 
+instance Arbitrary SCD.ActionDecl where
+  arbitrary = genActionDecl
+
+
 genDecl :: Gen SCD.Decl
 genDecl = oneof [(liftM SCD.ClassDecl' genClassDecl),
                  (liftM SCD.ThingDecl' genThingDecl),
                  (liftM SCD.ActionDecl' genActionDecl)]
+
+instance Arbitrary SCD.Decl where
+  arbitrary = genDecl
+
 
 genDecls :: Gen SCD.Decls
 genDecls = do classDecls <- listOf genClassDecl
               thingDecls <- listOf genThingDecl
               actionDecls <- listOf genActionDecl
               return SCD.Decls{..}
+
+instance Arbitrary SCD.Decls where
+  arbitrary = genDecls
+
 
 genPlayerDecl :: Gen SCD.PlayerDecl
 genPlayerDecl = do playerStats <- genStats
@@ -153,8 +224,16 @@ genPlayerDecl = do playerStats <- genStats
                    playerDesc <- genThingDesc
                    return SCD.PlayerDecl{..}
 
+instance Arbitrary SCD.PlayerDecl where
+  arbitrary = genPlayerDecl
+
+
 genWorldDescDecl :: Gen SCD.WorldDescDecl
 genWorldDescDecl = liftM SCD.WorldDescDecl genActionDesc
+
+instance Arbitrary SCD.WorldDescDecl where
+  arbitrary = genWorldDescDecl
+
 
 genStage :: Gen SCD.Stage
 genStage = do decls <- listOf genDecl
@@ -162,7 +241,8 @@ genStage = do decls <- listOf genDecl
               worldDescDecl <- genWorldDescDecl
               return SCD.Stage{..}
 
-
+instance Arbitrary SCD.Stage where
+  arbitrary = genStage
 
 
 {- Pretty printers -}
@@ -170,8 +250,11 @@ genStage = do decls <- listOf genDecl
 idD :: SD.Id -> Doc
 idD id = text id
 
+strLitD :: String -> Doc
+strLitD str = text $ "\"" ++ str ++ "\""
+
 nameD :: SD.Name -> Doc
-nameD name = text $ "\"" ++ name ++ "\""
+nameD name = strLitD name
 
 statD :: (SD.Id, Integer) -> Doc
 statD (id, val) = idD id <+> text "=" <+> integer val
@@ -269,13 +352,92 @@ modD (SCD.AndMod mod1 mod2)     = text "first"
                                   <+> modD mod2
 
 exprD :: SCD.Expr -> Doc
-exprD = undefined
+exprD (SCD.NumExpr int) = integer int
+exprD (SCD.NegExpr expr) = text "-" <> exprD expr
+exprD (SCD.OpExpr expr1 op expr2) = exprD expr1 <+> opD op <+> exprD expr2
+exprD (SCD.StatExpr id) = text "its" <+> idD id
+exprD (SCD.ThingStatExpr id1 id2) = idD id1 <> text "'s" <+> idD id2
+exprD (SCD.PlayerStatExpr id) = text "the player's" <+> idD id
+
+opD :: SCD.Op -> Doc
+opD (SCD.Add) = text "+"
+opD (SCD.Sub) = text "-"
+opD (SCD.Mul) = text "*"
+opD (SCD.Div) = text "/"
+opD (SCD.Mod) = text "%"
 
 thingDescD :: SCD.ThingDesc -> Doc
-thingDescD = undefined
+thingDescD (SCD.LiteralTDesc str) =
+  strLitD str
+thingDescD (SCD.NameTDesc) =
+  text "its name"
+thingDescD (SCD.StatTDesc id) =
+  text "the value of its"
+  <+> idD id
+thingDescD (SCD.IfPTDesc pred tDescT tDescF) =
+  text "if it"
+  <+> predD pred
+  <+> text "then"
+  <+> thingDescD tDescT
+  <> text ", but"
+  <+> thingDescD tDescF
+  <+> text "otherwise"
+thingDescD (SCD.IfCTDesc cond tDescT tDescF) =
+  text "if"
+  <+> conditionD cond
+  <+> text "then"
+  <+> thingDescD tDescT
+  <> text ", but"
+  <+> thingDescD tDescF
+  <+> text "otherwise"
+thingDescD (SCD.ContainedTDesc stDesc str) =
+  text "for each contained thing,"
+  <+> subThingDescD stDesc
+  <> text ", separated by"
+  <+> strLitD str
+thingDescD (SCD.ConcatTDesc tDescs) =
+  aux tDescs
+  where
+    aux :: [SCD.ThingDesc] -> Doc
+    aux []       = empty
+    aux [tDesc]  = thingDescD tDesc
+    aux (td:tds) = thingDescD td
+                   <+> text "+"
+                   <+> aux tds
+
+subThingDescD :: SCD.SubThingDesc -> Doc
+subThingDescD (SCD.DefaultSubTDesc) = text "its description"
+subThingDescD (SCD.CustomSubTDesc tDesc) = thingDescD tDesc
+
 
 actionDescD :: SCD.ActionDesc -> Doc
-actionDescD = undefined
+actionDescD (SCD.LiteralADesc str) =
+  strLitD str
+actionDescD (SCD.IfADesc cond aDescT aDescF) =
+  text "if"
+  <+> conditionD cond
+  <+> text "then"
+  <+> actionDescD aDescT
+  <> text ", but"
+  <+> actionDescD aDescF
+  <+> text "otherwise"
+actionDescD (SCD.PlayerADesc stDesc) =
+  text "description by"
+  <+> subThingDescD stDesc
+  <+> text "of the player"
+actionDescD (SCD.LocationADesc stDesc) =
+  text "description by"
+  <+> subThingDescD stDesc
+  <+> text "of the current location"
+actionDescD (SCD.ConcatADesc aDescs) =
+  aux aDescs
+  where
+    aux :: [SCD.ActionDesc] -> Doc
+    aux []       = empty
+    aux [aDesc]  = actionDescD aDesc
+    aux (ad:ads) = actionDescD ad
+                   <+> text "+"
+                   <+> aux ads
 
 classDeclD :: SCD.ClassDecl -> Doc
 classDeclD SCD.ClassDecl{..} =
