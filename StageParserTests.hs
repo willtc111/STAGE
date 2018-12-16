@@ -15,8 +15,11 @@ import Test.QuickCheck.Instances
 import Control.Monad
 
 {- Tests -}
-
-
+checkParseStage :: SCD.Stage -> Bool
+checkParseStage stage =
+  case (parseStage "" (render $ stageD stage)) of
+    Left  _ -> False
+    Right s -> stage == s
 
 
 {- Generators -}
@@ -36,7 +39,7 @@ genAlphaNum :: Gen Char
 genAlphaNum = frequency $ alphaFrequencies ++ digitFrequencies
 
 genAlphaNumString :: Gen String
-genAlphaNumString = listOf genAlphaNum
+genAlphaNumString = listOf1 genAlphaNum
 
 genId :: Gen SD.Id
 genId = genAlphaNumString
@@ -498,10 +501,10 @@ actionDeclD SCD.ActionDecl{..} =
   <+> modD modifyPlayer
   <> text ", modifies the current location by"
   <+> modD modifyCurrentLocation
-  <+> case newLocation of
-        Just id -> text "before setting the current location to"
-                   <+> idD id
-        Nothing -> empty
+  <+> (case newLocation of
+         Just id -> text "before setting the current location to"
+                    <+> idD id
+         Nothing -> empty)
   <> text ", and is described by"
   <+> actionDescD actionDesc
   <> text "."
@@ -530,20 +533,22 @@ declsD SCD.Decls{..} = classDeclsD $+$ thingDeclsD $+$ actionDeclsD
 playerDeclD :: SCD.PlayerDecl -> Doc
 playerDeclD SCD.PlayerDecl{..} =
   text "The player"
-  <+> if null playerStats
-        then empty
-        else text "has"
-             <+> statsD playerStats
-             <+> text "and"
-  <+> if null playerThings
-        then empty
-        else text "has"
-             <+> thingsD playerThings
-             <+> text "and"
+  <+> (if null playerStats
+         then empty
+         else text "has"
+              <+> statsD playerStats
+              <+> text "and")
+  <+> (if null playerThings
+         then empty
+         else text "has"
+              <+> thingsD playerThings
+              <+> text "and")
+  <+> (if null playerDesc
+         then empty
+         else text "and is described by"
+              <+> thingDescD playerDesc)
   <+> text "starts in"
   <+> idD playerStart
-  <+> text "and is described by"
-  <+> thingDescD playerDesc
   <> text "."
 
 worldDescDeclD :: SCD.WorldDescDecl -> Doc
@@ -554,13 +559,13 @@ worldDescDeclD (SCD.WorldDescDecl actDesc) =
 
 stageD :: SCD.Stage -> Doc
 stageD SCD.Stage{..} = (fsep $ fmap declD firstDeclList)
-                       $+$ if playerDeclFirst
+                       $+$ (if playerDeclFirst
                              then playerDeclD playerDecl
                                   $+$ (fsep $ fmap declD middleDeclList)
                                   $+$ worldDescDeclD worldDescDecl
                              else worldDescDeclD worldDescDecl
                                   $+$ (fsep $ fmap declD middleDeclList)
-                                  $+$ playerDeclD playerDecl
+                                  $+$ playerDeclD playerDecl)
                        $+$ (fsep $ fmap declD lastDeclList)
   where firstDeclList = take 1 decls
         middleDeclList = take 1 (drop 1 decls)

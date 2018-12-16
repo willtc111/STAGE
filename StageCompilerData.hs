@@ -3,12 +3,13 @@ module StageCompilerData where
 import StageData
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import qualified Data.List as List
 
 data Condition = LocationCondition Pred
                | PlayerCondition Pred
                | OrCondition Condition Condition
                | AndCondition Condition Condition
-  deriving (Show)
+  deriving (Show, Eq)
 
 data Pred = TruePred
           | IdPred Id
@@ -18,7 +19,7 @@ data Pred = TruePred
           | NotPred Pred
           | OrPred Pred Pred
           | AndPred Pred Pred
-  deriving (Show)
+  deriving (Show,Eq)
 
 data Cmp = EqCmp
          | NeCmp
@@ -26,7 +27,7 @@ data Cmp = EqCmp
          | LeCmp
          | GtCmp
          | GeCmp
-  deriving (Show)
+  deriving (Show,Eq)
 
 data Mod = DoNothingMod
          | SetMod Id Expr
@@ -34,7 +35,7 @@ data Mod = DoNothingMod
          | TakeMod Pred
          | IfMod Pred Mod Mod
          | AndMod Mod Mod
-  deriving (Show)
+  deriving (Show,Eq)
 
 data Expr = NumExpr Integer
           | NegExpr Expr
@@ -42,10 +43,10 @@ data Expr = NumExpr Integer
           | StatExpr Id
           | ThingStatExpr Id Id
           | PlayerStatExpr Id
-  deriving (Show)
+  deriving (Show,Eq)
 
 data Op = Add | Sub | Mul | Div | Mod
-  deriving (Show)
+  deriving (Show,Eq)
 
 data ThingDesc = LiteralTDesc String
                | NameTDesc
@@ -54,24 +55,24 @@ data ThingDesc = LiteralTDesc String
                | IfCTDesc Condition ThingDesc ThingDesc
                | ContainedTDesc SubThingDesc String
                | ConcatTDesc [ThingDesc]
-  deriving (Show)
+  deriving (Show,Eq)
 
 data SubThingDesc = DefaultSubTDesc | CustomSubTDesc ThingDesc
-  deriving (Show)
+  deriving (Show,Eq)
 
 data ActionDesc = LiteralADesc String
                 | IfADesc Condition ActionDesc ActionDesc
                 | PlayerADesc SubThingDesc
                 | LocationADesc SubThingDesc
                 | ConcatADesc [ActionDesc]
-  deriving (Show)
+  deriving (Show,Eq)
 
 data ClassDecl = ClassDecl
       { classId :: Id
       , classStats :: Stats
       , classDesc :: ThingDesc
       }
-  deriving (Show)
+  deriving (Show,Eq)
 
 data Class = Class Stats (World -> Thing -> String)
 
@@ -82,7 +83,7 @@ data ThingDecl = ThingDecl
       , stats :: Stats
       , contents :: Things
       }
-  deriving (Show)
+  deriving (Show,Eq)
 
 data ActionDecl = ActionDecl
       { actionName :: Name
@@ -97,12 +98,12 @@ data ActionDecl = ActionDecl
       , condition :: Condition
       , actionDesc :: ActionDesc
       }
-  deriving (Show)
+  deriving (Show,Eq)
 
 data Decl = ClassDecl' ClassDecl
           | ThingDecl' ThingDecl
           | ActionDecl' ActionDecl
-  deriving (Show)
+  deriving (Show,Eq)
 
 data Decls = Decls
       { classDecls :: [ClassDecl]
@@ -110,6 +111,17 @@ data Decls = Decls
       , actionDecls :: [ActionDecl]
       }
   deriving (Show)
+
+instance Eq Decls where
+  (==) a b = (acds List.\\ bcds == []) && (atds List.\\ btds == []) && (aads List.\\ bads == [])
+          && (bcds List.\\ acds == []) && (btds List.\\ atds == []) && (bads List.\\ aads == [])
+    where
+      acds = (classDecls a)
+      bcds = (classDecls b)
+      atds = (thingDecls a)
+      btds = (thingDecls b)
+      aads = (actionDecls a)
+      bads = (actionDecls b)
 
 emptyDecls :: Decls
 emptyDecls = Decls { classDecls = []
@@ -123,16 +135,17 @@ data PlayerDecl = PlayerDecl
       , playerStart :: Id
       , playerDesc :: ThingDesc
       }
-  deriving (Show)
+  deriving (Show, Eq)
 
 data WorldDescDecl = WorldDescDecl ActionDesc
-  deriving (Show)
+  deriving (Show, Eq)
 
 data Stage = Stage
       { decls :: [Decl]
       , playerDecl :: PlayerDecl
       , worldDescDecl :: WorldDescDecl
       }
+  deriving (Show, Eq)
 
 data StaticData = StaticData
       { classIds :: Set.Set Id
