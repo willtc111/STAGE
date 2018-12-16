@@ -6,6 +6,7 @@ import StageData
 import StageCompilerData
 import StageLexer
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import Text.Parsec
 import Text.Parsec.Expr
 import Data.Functor.Identity
@@ -86,8 +87,19 @@ pCmp = pfChoices [ EqCmp <$ symbol "="
                  ]
 
 pMod :: Parser Mod
-pMod = pfChoices [ const DoNothingMod <$> symbols "doing nothing"
-                -- TODO
+pMod = pfChoices [ DoNothingMod <$ symbols "doing nothing"
+                 , SetMod       <$> (symbols "setting its" >> identifier) <*> (symbol "to" >> pExpr)
+                 , GiveMod      <$> (symbols "giving it" >> identifier)
+                 , TakeMod      <$> (symbols "taking away everything it contains that" >> pPred)
+                 , do symbols "if it"
+                      pred <- pPred
+                      symbol "then"
+                      thenMod <- pMod
+                      symbols ", but"
+                      elseMod <- pMod
+                      symbol "otherwise"
+                      return $ IfMod pred thenMod elseMod
+                 , AndMod <$> (symbol "first" >> pMod) <*> (symbols "and then" >> pMod)
                  ]
 
 pExpr :: Parser Expr
@@ -139,7 +151,7 @@ pThingDecl = do symbol "Thing"
                 symbol "named"
                 name <- stringLiteral
                 let stats = Map.empty -- TODO
-                let contents = [] -- TODO
+                let contents = Set.empty -- TODO
                 return ThingDecl{..}
 
 pActionDecl :: Parser ActionDecl
@@ -181,7 +193,7 @@ pDecl = do decl <- pfChoices [ ClassDecl' <$> pClassDecl
 pPlayerDecl :: Parser PlayerDecl
 pPlayerDecl = do symbols "The player"
                  let playerStats = Map.empty -- TODO
-                 let playerThings = [] -- TODO
+                 let playerThings = Set.empty -- TODO
                  symbols "starts in"
                  playerStart <- identifier
                  symbols "and is described by"

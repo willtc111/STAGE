@@ -41,7 +41,7 @@ Pred := is unconditional | is Maybe(not) thing Id | does Maybe(not) contain some
 
 Cmp := = | /= | < | <= | > | >=
 
-Mod := doing nothing | setting its Id to Expr | giving it Id | taking Id from it | if it Pred then Mod, but Mod otherwise | modifying by Mod everything it contains | first Mod and then Mod
+Mod := doing nothing | setting its Id to Expr | giving it Id | taking away everything it contains that Pred | if it Pred then Mod, but Mod otherwise | first Mod and then Mod
 
 Expr := (Expr) | Nat | -Expr | Expr Op Expr | its Id | Id's Id | the player's Id
 

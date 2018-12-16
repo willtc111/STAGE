@@ -31,9 +31,8 @@ data Cmp = EqCmp
 data Mod = DoNothingMod
          | SetMod Id Expr
          | GiveMod Id
-         | TakeMod Id
+         | TakeMod Pred
          | IfMod Pred Mod Mod
-         | ContainsMod Mod
          | AndMod Mod Mod
   deriving (Show)
 
@@ -72,7 +71,7 @@ data ThingDecl = ThingDecl
       , thingClass :: Id
       , name :: Name
       , stats :: Stats
-      , contents :: [Id]
+      , contents :: Set.Set Id
       }
   deriving (Show)
 
@@ -111,7 +110,7 @@ emptyDecls = Decls { classDecls = []
 
 data PlayerDecl = PlayerDecl
       { playerStats :: Stats
-      , playerThings :: [Id]
+      , playerThings :: Set.Set Id
       , playerStart :: Id
       , playerDesc :: ThingDesc
       }

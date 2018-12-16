@@ -1,6 +1,7 @@
 module StageData where
 
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 
 type Id = String
 type Name = String
@@ -19,6 +20,6 @@ data Action = Action { shouldRun :: World -> Bool
 data Thing = Thing { name :: Name
                    , describeThing :: World -> String
                    , stats :: Stats
-                   , contents :: [Id]
+                   , contents :: Set.Set Id
                    , thingId :: Id
                    }

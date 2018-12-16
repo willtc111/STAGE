@@ -44,6 +44,10 @@ buildStaticData Decls{..} = StaticData{..}
   where classIds = Set.fromList $ map classId classDecls
         thingClasses = Map.fromList $ map (liftM2 (,) thingId thingClass) thingDecls
 
+validateThing :: StaticData -> Id -> Fallible ()
+validateThing staticData thingId =
+  unless (thingExists staticData thingId) $ fail $ "Unrecognized thing id: " ++ thingId
+
 buildMapFromDeclsWith :: Ord k => (Map.Map k v -> a -> Fallible (k, v)) -> [a] -> Fallible (Map.Map k v)
 buildMapFromDeclsWith f = foldr ((=<<) . aux) (return Map.empty)
   where aux a m = do (k, v) <- f m a
@@ -74,10 +78,7 @@ buildActions :: StaticData -> [ActionDecl] -> Fallible (Map.Map Name [Action])
 buildActions staticData = buildMapFromDeclsWith $
   \actions decl -> case decl of
     ActionDecl{..} ->
-      do case newLocation of
-           Nothing  -> return ()
-           Just loc -> unless (thingExists staticData loc)
-                         (fail $ "Unrecognized thing id: " ++ loc)
+      do maybe (return ()) (validateThing staticData) newLocation
          shouldRun <- buildCondition staticData condition
          modifyPlayer' <- buildMod staticData modifyPlayer
          modifyCurrentLocation' <- buildMod staticData modifyCurrentLocation
@@ -95,9 +96,8 @@ buildActions staticData = buildMapFromDeclsWith $
 
 buildPlayer :: StaticData -> PlayerDecl -> Fallible (Thing, Id)
 buildPlayer staticData PlayerDecl{..} =
-  do let validateId thingId = unless (thingExists staticData thingId)
-                                (fail $ "Unrecognized thing id: " ++ thingId)
-     mapM_ validateId $ playerStart:playerThings
+  do validateThing staticData playerStart
+     mapM_ (validateThing staticData) playerThings
      desc <- buildThingDesc staticData playerDesc
      let player = Thing { name = ""
                         , describeThing = desc player
@@ -142,9 +142,8 @@ buildPred :: StaticData -> Pred -> Fallible (World -> Thing -> Bool)
 buildPred staticData pred = case pred of
   TruePred -> return $ \_ _ -> True
   IdPred thingId ->
-    if thingExists staticData thingId
-      then return $ \_ t -> SD.thingId t == thingId
-      else fail $ "Unrecognized thing id: " ++ thingId
+    do validateThing staticData thingId
+       return $ \_ t -> SD.thingId t == thingId
   ContainsPred p ->
     do p' <- buildPred staticData p
        return $ \w t -> any (maybe False (p' w) . flip Map.lookup (things w)) (SD.contents t)
@@ -175,7 +174,26 @@ buildCmp GeCmp = (>=)
 
 buildMod :: StaticData -> Mod -> Fallible (World -> Thing -> Thing)
 buildMod staticData mod = case mod of
-  DoNothingMod -> return $ \_ t -> t
+  DoNothingMod -> return $ const id
+  SetMod stat expr ->
+    do expr' <- buildExpr staticData expr
+       return $ \w t -> setStat stat (expr' w t) t
+  GiveMod thingId ->
+    do validateThing staticData thingId
+       return $ \_ Thing{..} -> Thing{contents = Set.insert thingId contents, ..}
+  TakeMod pred ->
+    do pred' <- buildPred staticData pred
+       let p w = maybe False (pred' w) . flip Map.lookup (SD.things w)
+       return $ \w Thing{..} -> Thing{contents = Set.filter (p w) contents, ..}
+  IfMod pred thenMod elseMod ->
+    do pred' <- buildPred staticData pred
+       thenMod' <- buildMod staticData thenMod
+       elseMod' <- buildMod staticData elseMod
+       return $ \w t -> if pred' w t then thenMod' w t else elseMod' w t
+  AndMod mod1 mod2 ->
+    do mod1' <- buildMod staticData mod1
+       mod2' <- buildMod staticData mod2
+       return $ liftM2 (.) mod2' mod1'
 
 buildExpr :: StaticData -> Expr -> Fallible (World -> Thing -> Integer)
 buildExpr staticData expr = case expr of
@@ -188,6 +206,11 @@ buildExpr staticData expr = case expr of
        e2' <- buildExpr staticData e2
        let o' = buildOp o
        return $ \w t -> o' (e1' w t) (e2' w t)
+  StatExpr stat -> return $ \_ t -> getStat stat t
+  ThingStatExpr thingId stat ->
+    do validateThing staticData thingId
+       return $ \w _ -> getStat stat $ fromJust $ Map.lookup thingId (SD.things w)
+  PlayerStatExpr stat -> return $ \w _ -> getStat stat (SD.player w)
 
 buildOp :: Op -> (Integer -> Integer -> Integer)
 buildOp Add = (+)
@@ -198,3 +221,6 @@ buildOp Mod = Math.mod
 
 getStat :: Id -> Thing -> Integer
 getStat stat = Map.findWithDefault 0 stat . SD.stats
+
+setStat :: Id -> Integer -> Thing -> Thing
+setStat stat val Thing{..} = Thing{stats = Map.insert stat val stats, ..}
