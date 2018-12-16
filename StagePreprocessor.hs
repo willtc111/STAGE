@@ -35,7 +35,7 @@ pMovingDecl =
      string "."
      return $ concat [ "Action \""
                      , actionName
-                     , "\" is available when the current location is "
+                     , "\" is available when the current location is thing "
                      , roomFrom
                      , ", modifies the player by doing nothing, "
                      , "modifies the current location by doing nothing "

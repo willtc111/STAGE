@@ -4,7 +4,6 @@
  - There are no stats or items.
  -}
 
-
 The player starts in room1 and is described by "You don't question your simple existence.".
 
 A room is described by "You are in " + its name + ". There is a door here.".
@@ -17,3 +16,6 @@ Moving from room2 to room1 is invoked with "go through door" and described by "Y
 
 Action "jump" is always available, modifies the player by doing nothing, modifies
 the current location by doing nothing, and is described by "You jump. It doesn't seem to accomplish much.".
+
+Action "pace" is available when the current location is a room, modifies the player by doing nothing, modifies
+the current location by doing nothing, and is described by "You pace around the room for a short while.".

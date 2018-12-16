@@ -21,5 +21,4 @@ data Thing = Thing { name :: Name
                    , stats :: Stats
                    , contents :: [Id]
                    , thingId :: Id
-                   , thingClass :: Id
                    }

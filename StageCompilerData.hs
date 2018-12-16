@@ -1,6 +1,8 @@
 module StageCompilerData where
 
 import StageData
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 
 data Condition = LocationCondition Pred
                | PlayerCondition Pred
@@ -94,10 +96,11 @@ data Decl = ClassDecl' ClassDecl
           | ActionDecl' ActionDecl
   deriving (Show)
 
-data Decls = Decls { classDecls :: [ClassDecl]
-                   , thingDecls :: [ThingDecl]
-                   , actionDecls :: [ActionDecl]
-                   }
+data Decls = Decls
+      { classDecls :: [ClassDecl]
+      , thingDecls :: [ThingDecl]
+      , actionDecls :: [ActionDecl]
+      }
   deriving (Show)
 
 emptyDecls :: Decls
@@ -107,9 +110,25 @@ emptyDecls = Decls { classDecls = []
                    }
 
 data PlayerDecl = PlayerDecl
-                    { playerStats :: Stats
-                    , playerThings :: [Id]
-                    , playerStart :: Id
-                    , playerDesc :: ThingDesc
-                    }
+      { playerStats :: Stats
+      , playerThings :: [Id]
+      , playerStart :: Id
+      , playerDesc :: ThingDesc
+      }
   deriving (Show)
+
+data StaticData = StaticData
+      { classIds :: Set.Set Id
+      , thingClasses :: Map.Map Id Id
+      }
+  deriving (Show)
+
+classExists :: StaticData -> Id -> Bool
+classExists sd classId = Set.member classId (classIds sd)
+
+thingExists :: StaticData -> Id -> Bool
+thingExists sd thingId = Map.member thingId (thingClasses sd)
+
+thingHasClass :: StaticData -> Id -> Thing -> Bool
+thingHasClass sd classId thing =
+  Map.lookup (StageData.thingId thing) (thingClasses sd) == Just classId

@@ -65,8 +65,8 @@ pCondition = pfChoices [ LocationCondition <$> (symbols "the current location" >
 
 pPred :: Parser Pred
 pPred = pfChoices [ TruePred               <$  symbols "is unconditional"
-                  , IdPred                 <$> (symbol "is" >> identifier)
-                  , NotPred . IdPred       <$> (symbol "is not" >> identifier)
+                  , IdPred                 <$> (symbols "is thing" >> identifier)
+                  , NotPred . IdPred       <$> (symbol "is not thing" >> identifier)
                   , ContainsPred           <$> (symbols "does contain something that" >> pPred)
                   , NotPred . ContainsPred <$> (symbols "does not contain something that" >> pPred)
                   , ClassPred              <$> (symbol "is" >> pAn >> identifier)
