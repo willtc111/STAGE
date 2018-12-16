@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards, FlexibleInstances, TypeSynonymInstances #-}
 
 module StageParserTests where
 
@@ -7,15 +7,149 @@ import qualified StageData as SD
 import qualified StageCompilerData as SCD
 
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 
 import Text.PrettyPrint
 import Test.QuickCheck
+import Test.QuickCheck.Instances
+import Control.Monad
 
+
+{- Generators -}
+
+alphaFrequencies :: [(Int, Gen Char)]
+alphaFrequencies = [(26, choose ('a', 'z')),
+                    (26, choose ('A', 'Z')),
+                    (1,  return '_')]
+
+digitFrequencies :: [(Int, Gen Char)]
+digitFrequencies = [(10, choose ('0', '9'))]
+
+genAlpha :: Gen Char
+genAlpha = frequency alphaFrequencies
+
+genAlphaNum :: Gen Char
+genAlphaNum = frequency $ alphaFrequencies ++ digitFrequencies
+
+genAlphaNumString :: Gen String
+genAlphaNumString = listOf genAlphaNum
+
+genId :: Gen SD.Id
+genId = genAlphaNumString
+
+genName :: Gen SD.Name
+genName = genAlphaNumString
+
+genStats :: Gen (Map.Map SD.Id Integer)
+genStats = Map.fromList <$> genStatList
+  where
+    genStatList :: Gen [(SD.Id, Integer)]
+    genStatList = listOf genStat
+    genStat :: Gen (SD.Id, Integer)
+    genStat = liftM2 (,) genId (arbitrary :: Gen Integer)
+
+genCondition :: Gen SCD.Condition
+genCondition = oneof [(liftM SCD.LocationCondition genPred),
+                      (liftM SCD.PlayerCondition genPred),
+                      (liftM2 SCD.OrCondition genCondition genCondition),
+                      (liftM2 SCD.AndCondition genCondition genCondition)]
+
+genPred :: Gen SCD.Pred
+genPred = oneof [(return SCD.TruePred),
+                 (liftM SCD.IdPred genId),
+                 (liftM SCD.ContainsPred genPred),
+                 (liftM SCD.ClassPred genId),
+                 (liftM3 SCD.StatPred genId genCmp genExpr),
+                 (liftM SCD.NotPred genPred),
+                 (liftM2 SCD.OrPred genPred genPred),
+                 (liftM2 SCD.AndPred genPred genPred)]
+
+genCmp :: Gen SCD.Cmp
+genCmp = oneof [(return SCD.EqCmp),
+                (return SCD.NeCmp),
+                (return SCD.LtCmp),
+                (return SCD.LeCmp),
+                (return SCD.GtCmp),
+                (return SCD.GeCmp)]
+
+genMod :: Gen SCD.Mod
+genMod = oneof [(return SCD.DoNothingMod),
+                (liftM2 SCD.SetMod genId genExpr),
+                (liftM SCD.GiveMod genId),
+                (liftM SCD.TakeMod genPred),
+                (liftM3 SCD.IfMod genPred genMod genMod),
+                (liftM2 SCD.AndMod genMod genMod)]
+
+genExpr :: Gen SCD.Expr
+genExpr = oneof [(liftM SCD.NumExpr (arbitrary :: Gen Integer)),
+                 (liftM SCD.NegExpr genExpr),
+                 (liftM3 SCD.OpExpr genExpr genOp genExpr),
+                 (liftM SCD.StatExpr genId),
+                 (liftM2 SCD.ThingStatExpr genId genId),
+                 (liftM SCD.PlayerStatExpr genId)]
+
+genOp :: Gen SCD.Op
+genOp = oneof [(return SCD.Add),
+               (return SCD.Sub),
+               (return SCD.Mul),
+               (return SCD.Div),
+               (return SCD.Mod)]
+
+genThingDesc :: Gen SCD.ThingDesc
+genThingDesc = undefined -- TODO
+
+genActionDesc :: Gen SCD.ActionDesc
+genActionDesc = undefined -- TODO
+
+genClassDecl :: Gen SCD.ClassDecl
+genClassDecl = do classId <- genId
+                  classStats <- genStats
+                  classDesc <- genThingDesc
+                  return SCD.ClassDecl{..}
+
+genThings :: Gen (Set.Set SD.Id)
+genThings = Set.fromList <$> listOf genId
+
+genThingDecl :: Gen SCD.ThingDecl
+genThingDecl = do thingId <- genId
+                  thingClass <- genId
+                  name <- genName
+                  stats <- genStats
+                  contents <- genThings
+                  return SCD.ThingDecl{..}
+
+genActionDecl :: Gen SCD.ActionDecl
+genActionDecl = oneof [
+  (do actionName <- genName
+      condition <- genCondition
+      modifyPlayer <- genMod
+      modifyCurrentLocation <- genMod
+      newLocation <- genMaybeId
+      actionDesc <- genActionDesc
+      return SCD.ActionDecl{..} ),
+  (do actionName <- genName
+      condition <- genCondition
+      actionDesc <- genActionDesc
+      return SCD.GameEndDecl{..})]
+  where
+    genMaybeId :: Gen (Maybe SD.Id)
+    genMaybeId = oneof [(Just <$> genId), (return Nothing)]
+
+genDecl :: Gen SCD.Decl
+genDecl = oneof [(liftM SCD.ClassDecl' genClassDecl),
+                 (liftM SCD.ThingDecl' genThingDecl),
+                 (liftM SCD.ACtionDecl' genActionDecl)]
+
+
+-- todo decls
+
+
+{- Pretty printers -}
 
 idD :: SD.Id -> Doc
 idD id = text id
 
-nameD :: String -> Doc
+nameD :: SD.Name -> Doc
 nameD name = text $ "\"" ++ name ++ "\""
 
 statD :: (SD.Id, Integer) -> Doc
@@ -97,11 +231,21 @@ modD (SCD.SetMod id expr)       = text "setting its"
                                   <+> idD id
                                   <+> text "to"
                                   <+> exprD expr
-modD (SCD.GiveMod id)           = text "giving it" <+> idD id
-modD (SCD.TakeMod id)           = text "taking" <+> idD id <+> text "from it"
-modD (SCD.IfMod pred modT modF) = undefined -- TODO once predD is added
-modD (SCD.ContainsMod mod)      = text "modifying by" <+> modD mod <+> text "everything it contains"
-modD (SCD.AndMod mod1 mod2)     = text "first" <+> modD mod1 <+> text "and then" <+> modD mod2
+modD (SCD.GiveMod id)           = text "giving it"
+                                  <+> idD id
+modD (SCD.TakeMod pred)         = text "taking away everything it contains that"
+                                  <+> predD pred
+modD (SCD.IfMod pred modT modF) = text "if it"
+                                  <+> predD pred
+                                  <+> text "then"
+                                  <+> modD modT
+                                  <> text ", but"
+                                  <+> modD modF
+                                  <+> text "otherwise"
+modD (SCD.AndMod mod1 mod2)     = text "first"
+                                  <+> modD mod1
+                                  <+> text "and then"
+                                  <+> modD mod2
 
 exprD :: SCD.Expr -> Doc
 exprD = undefined
@@ -144,10 +288,12 @@ thingDeclD kind SCD.ThingDecl{..} = text kind
                               else text "that contains" <+> thingsD contents
 
 
-thingsD :: [SD.Id] -> Doc
-thingsD [] = empty
-thingsD [id] = text "thing" <+> idD id
-thingsD ids = text "things" <+> listD idD ids
+thingsD :: Set.Set SD.Id -> Doc
+thingsD thingSet = thingsListD $ Set.toList thingSet
+  where 
+    thingsListD [] = empty
+    thingsListD [id] = text "thing" <+> idD id
+    thingsListD ids = text "things" <+> listD idD ids
 
 
 actionDeclD :: SCD.ActionDecl -> Doc
@@ -161,7 +307,8 @@ actionDeclD SCD.ActionDecl{..} =
   <> text ", modifies the current location by"
   <+> modD modifyCurrentLocation
   <+> case newLocation of
-        Just id -> text "before setting the current location to" <+> idD id
+        Just id -> text "before setting the current location to"
+                   <+> idD id
         Nothing -> empty
   <> text ", and is described by"
   <+> actionDescD actionDesc
