@@ -6,6 +6,7 @@ import qualified Data.Set as Set
 type Id = String
 type Name = String
 type Stats = Map.Map Id Integer
+type Things = Set.Set Id
 
 data World = World { things :: Map.Map Id Thing
                    , player :: Thing
@@ -20,6 +21,6 @@ data Action = Action { shouldRun :: World -> Bool
 data Thing = Thing { name :: Name
                    , describeThing :: World -> String
                    , stats :: Stats
-                   , contents :: Set.Set Id
+                   , contents :: Things
                    , thingId :: Id
                    }

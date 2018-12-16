@@ -49,12 +49,21 @@ data Op = Add | Sub | Mul | Div | Mod
 
 data ThingDesc = LiteralTDesc String
                | NameTDesc
+               | StatTDesc Id
+               | IfPTDesc Pred ThingDesc ThingDesc
+               | IfCTDesc Condition ThingDesc ThingDesc
+               | ContainedTDesc SubThingDesc String
                | ConcatTDesc [ThingDesc]
-              -- TODO
+  deriving (Show)
+
+data SubThingDesc = DefaultSubTDesc | CustomSubTDesc ThingDesc
   deriving (Show)
 
 data ActionDesc = LiteralADesc String
-               -- TODO
+                | IfADesc Condition ActionDesc ActionDesc
+                | PlayerADesc ThingDesc
+                | LocationADesc ThingDesc
+                | ConcatADesc [ActionDesc]
   deriving (Show)
 
 data ClassDecl = ClassDecl
@@ -64,14 +73,14 @@ data ClassDecl = ClassDecl
       }
   deriving (Show)
 
-data Class = Class Stats (Thing -> World -> String)
+data Class = Class Stats (World -> Thing -> String)
 
 data ThingDecl = ThingDecl
       { thingId :: Id
       , thingClass :: Id
       , name :: Name
       , stats :: Stats
-      , contents :: Set.Set Id
+      , contents :: Things
       }
   deriving (Show)
 
@@ -110,7 +119,7 @@ emptyDecls = Decls { classDecls = []
 
 data PlayerDecl = PlayerDecl
       { playerStats :: Stats
-      , playerThings :: Set.Set Id
+      , playerThings :: Things
       , playerStart :: Id
       , playerDesc :: ThingDesc
       }

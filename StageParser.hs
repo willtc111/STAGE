@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, TupleSections #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module StageParser (parseStage) where
 
@@ -11,6 +11,7 @@ import Text.Parsec
 import Text.Parsec.Expr
 import Data.Functor.Identity
 import Data.Bifunctor
+import Data.Maybe
 
 {-
  - For brevity:
@@ -28,40 +29,59 @@ parseStage source = bimap show id . parse pStage source
 pfChoices :: [Parser a] -> Parser a
 pfChoices = choice . map try
 
-pfList :: Parser a -> Parser (a, a, [a])
+pfList :: Parser a -> Parser [a]
 pfList p = pfChoices [two, many]
   where two = do first <- p
                  symbol "and"
                  second <- p
-                 return (first, second, [])
-        many = do first <- p
+                 return [first, second]
+        many = do start <- p
                   comma
-                  second <- p
+                  middle <- commaSep1 p
                   comma
-                  more <- endBy p comma
                   symbol "and"
-                  lastOne <- p
-                  return (first, second, more ++ [lastOne])
+                  end <- p
+                  return $ start:middle++[end]
 
 pfMaybe :: Parser a -> Parser (Maybe a)
 pfMaybe = optionMaybe . try
 
+pfOption :: a -> Parser a -> Parser a
+pfOption x = option x . try
+
+pfIfButOtherwise :: (a -> b -> b -> c) -> Parser a -> Parser b -> Parser c
+pfIfButOtherwise combine pA pB =
+  do symbols "if it"
+     if' <- pA
+     symbol "then"
+     then' <- pB
+     comma
+     symbol "but"
+     else' <- pB
+     symbol "otherwise"
+     return $ combine if' then' else'
+
 pAn :: Parser ()
 pAn = pfChoices [symbols "a", symbols "an"]
 
+pStats :: Parser Stats
+pStats = pfChoices [ uncurry Map.singleton <$> (symbol "stat" >> pStat)
+                   , Map.fromList          <$> (symbol "stats" >> pfList pStat)
+                   ]
+  where pStat = (,) <$> identifier <*> (symbol "=" >> integer)
+
+pThings :: Parser Things
+pThings = pfChoices [ Set.singleton <$> (symbol "thing" >> identifier)
+                    , Set.fromList  <$> (symbol "things" >> pfList identifier)
+                    ]
+
 pCondition :: Parser Condition
 pCondition = pfChoices [ LocationCondition <$> (symbols "the current location" >> pPred)
-                       , PlayerCondition <$> (symbols "the player" >> pPred)
-                       , do symbol "either"
-                            c1 <- pCondition
-                            symbol "or"
-                            c2 <- pCondition
-                            return $ OrCondition c1 c2
-                       , do symbol "both"
-                            c1 <- pCondition
-                            symbol "and"
-                            c2 <- pCondition
-                            return $ AndCondition c1 c2
+                       , PlayerCondition   <$> (symbols "the player" >> pPred)
+                       , OrCondition       <$> (symbol "either" >> pCondition)
+                                           <*> (symbol "or" >> pCondition)
+                       , AndCondition      <$> (symbol "both" >> pCondition)
+                                           <*> (symbol "and" >> pCondition)
                        ]
 
 pPred :: Parser Pred
@@ -72,9 +92,13 @@ pPred = pfChoices [ TruePred               <$  symbols "is unconditional"
                   , NotPred . ContainsPred <$> (symbols "does not contain something that" >> pPred)
                   , ClassPred              <$> (symbol "is" >> pAn >> identifier)
                   , NotPred . ClassPred    <$> (symbols "is not" >> pAn >> identifier)
-                  , StatPred               <$> (symbol "has" >> identifier) <*> pCmp <*> pExpr
-                  , OrPred                 <$> (symbol "either" >> pPred) <*> (symbol "or" >> pPred)
-                  , AndPred                <$> (symbol "both" >> pPred) <*> (symbol "and" >> pPred)
+                  , StatPred               <$> (symbol "has" >> identifier)
+                                           <*> pCmp
+                                           <*> pExpr
+                  , OrPred                 <$> (symbol "either" >> pPred)
+                                           <*> (symbol "or" >> pPred)
+                  , AndPred                <$> (symbol "both" >> pPred)
+                                           <*> (symbol "and" >> pPred)
                   ]
 
 pCmp :: Parser Cmp
@@ -88,29 +112,22 @@ pCmp = pfChoices [ EqCmp <$ symbol "="
 
 pMod :: Parser Mod
 pMod = pfChoices [ DoNothingMod <$ symbols "doing nothing"
-                 , SetMod       <$> (symbols "setting its" >> identifier) <*> (symbol "to" >> pExpr)
+                 , SetMod       <$> (symbols "setting its" >> identifier)
+                                <*> (symbol "to" >> pExpr)
                  , GiveMod      <$> (symbols "giving it" >> identifier)
                  , TakeMod      <$> (symbols "taking away everything it contains that" >> pPred)
-                 , do symbols "if it"
-                      pred <- pPred
-                      symbol "then"
-                      thenMod <- pMod
-                      symbols ", but"
-                      elseMod <- pMod
-                      symbol "otherwise"
-                      return $ IfMod pred thenMod elseMod
-                 , AndMod <$> (symbol "first" >> pMod) <*> (symbols "and then" >> pMod)
+                 , pfIfButOtherwise IfMod pPred pMod
+                 , AndMod       <$> (symbol "first" >> pMod)
+                                <*> (symbols "and then" >> pMod)
                  ]
 
 pExpr :: Parser Expr
 pExpr = buildExpressionParser table pTerm
   where pTerm = pfChoices [ parens pExpr
-                          , NumExpr <$> natural
-                          , StatExpr <$> (symbol "its" >> identifier)
-                          , do thing <- identifier
-                               symbol "'s"
-                               stat <- identifier
-                               return $ ThingStatExpr thing stat
+                          , NumExpr        <$> natural
+                          , StatExpr       <$> (symbol "its" >> identifier)
+                          , ThingStatExpr  <$> identifier
+                                           <*> (symbol "'s" >> identifier)
                           , PlayerStatExpr <$> (symbols "the player's" >> identifier)
                           ]
         table = [ [Prefix $ symbol "-" >> return NegExpr]
@@ -120,24 +137,35 @@ pExpr = buildExpressionParser table pTerm
         op s o = Infix (symbol s >> return (flip OpExpr o)) AssocLeft
 
 pThingDesc :: Parser ThingDesc
-pThingDesc = concatTDesc <$> sepBy1 pThingDescNoConcat (symbol "+")
-  where concatTDesc [desc] = desc
-        concatTDesc descs  = ConcatTDesc descs
-        pThingDescNoConcat =
-          pfChoices [ LiteralTDesc  <$> stringLiteral
-                    , const NameTDesc <$> symbols "its name"
-                   -- TODO
+pThingDesc = ConcatTDesc <$> sepBy1 pThingDescNoConcat (symbol "+")
+  where pThingDescNoConcat =
+          pfChoices [ LiteralTDesc   <$> stringLiteral
+                    , NameTDesc      <$  symbols "its name"
+                    , StatTDesc      <$> (symbols "the value of its" >> identifier)
+                    , pfIfButOtherwise IfPTDesc pPred pThingDesc
+                    , pfIfButOtherwise IfCTDesc pCondition pThingDesc
+                    , ContainedTDesc <$> (symbols "for each contained thing," >> pSubThingDesc)
+                                     <*> (comma >> symbols "separated by String" >> stringLiteral)
                     ]
 
+pSubThingDesc :: Parser SubThingDesc
+pSubThingDesc = pfChoices [ DefaultSubTDesc <$  symbols "its description"
+                          , CustomSubTDesc  <$> pThingDesc
+                          ]
+
 pActionDesc :: Parser ActionDesc
-pActionDesc = pfChoices [ LiteralADesc <$> stringLiteral
-                       -- TODO
-                        ]
+pActionDesc = ConcatADesc <$> sepBy1 pActionDescNoConcat (symbol "+")
+  where pActionDescNoConcat =
+          pfChoices [ LiteralADesc  <$> stringLiteral
+                    , pfIfButOtherwise IfADesc pCondition pActionDesc
+                    , PlayerADesc   <$> between (symbols "description by") (symbols "of the player") pThingDesc
+                    , LocationADesc <$> between (symbols "description by") (symbols "of the currentlocation") pThingDesc
+                    ]
 
 pClassDecl :: Parser ClassDecl
 pClassDecl = do pfChoices [symbol "A", symbol "An"]
                 classId <- identifier
-                let classStats = Map.empty -- TODO
+                classStats <- pfOption Map.empty $ between (symbol "has") (symbol "and") pStats
                 symbols "is described by"
                 classDesc <- pThingDesc
                 return ClassDecl{..}
@@ -148,10 +176,9 @@ pThingDecl = do symbol "Thing"
                 symbol "is"
                 pAn
                 thingClass <- identifier
-                symbol "named"
-                name <- stringLiteral
-                let stats = Map.empty -- TODO
-                let contents = Set.empty -- TODO
+                name <- pfOption "" $ symbol "named" >> stringLiteral
+                stats <- pfOption Map.empty $ symbol "with" >> pStats
+                contents <- pfOption Set.empty $ symbols "that contains" >> pThings
                 return ThingDecl{..}
 
 pActionDecl :: Parser ActionDecl
@@ -166,7 +193,7 @@ pActionDecl = pfChoices [pNormalActionDecl, pGameEndDecl]
                                comma
                                symbols "modifies the current location by"
                                modifyCurrentLocation <- pMod
-                               newLocation <- pfMaybe (symbols "before setting the current location to" >> identifier)
+                               newLocation <- pfMaybe $ symbols "before setting the current location to" >> identifier
                                comma
                                symbols "and is described by"
                                actionDesc <- pActionDesc
@@ -183,8 +210,8 @@ pActionDecl = pfChoices [pNormalActionDecl, pGameEndDecl]
                           return GameEndDecl{..}
 
 pDecl :: Parser Decl
-pDecl = do decl <- pfChoices [ ClassDecl' <$> pClassDecl
-                             , ThingDecl' <$> pThingDecl
+pDecl = do decl <- pfChoices [ ClassDecl'  <$> pClassDecl
+                             , ThingDecl'  <$> pThingDecl
                              , ActionDecl' <$> pActionDecl
                              ]
            dot
@@ -192,8 +219,8 @@ pDecl = do decl <- pfChoices [ ClassDecl' <$> pClassDecl
 
 pPlayerDecl :: Parser PlayerDecl
 pPlayerDecl = do symbols "The player"
-                 let playerStats = Map.empty -- TODO
-                 let playerThings = Set.empty -- TODO
+                 playerStats <- pfOption Map.empty $ between (symbol "has") (symbol "and") pStats
+                 playerThings <- pfOption Set.empty $ between (symbol "has") (symbol "and") pThings
                  symbols "starts in"
                  playerStart <- identifier
                  symbols "and is described by"

@@ -47,7 +47,7 @@ Expr := (Expr) | Nat | -Expr | Expr Op Expr | its Id | Id's Id | the player's Id
 
 Op := + | - | * | / | %
 
-ThingDesc := String | its name | its Id | if it Pred then ThingDesc, but ThingDesc otherwise | if Condition then ThingDesc, but ThingDesc otherwise | for each contained thing, SubThingDesc, separated by String | ThingDesc + ThingDesc
+ThingDesc := String | its name | the value of its Id | if it Pred then ThingDesc, but ThingDesc otherwise | if Condition then ThingDesc, but ThingDesc otherwise | for each contained thing, SubThingDesc, separated by String | ThingDesc + ThingDesc
 
 SubThingDesc := its description | ThingDesc
 
@@ -55,7 +55,7 @@ ActionDesc := String | if Condition then ActionDesc, but ActionDesc otherwise | 
 
 ClassDecl := Either("A", "An") Id Maybe(has Stats and) is described by ThingDesc.
 
-ThingDecl := "Thing" Id is An Id named String Maybe(with Stats) Maybe(that contains Things).
+ThingDecl := "Thing" Id is An Id Maybe(named String) Maybe(with Stats) Maybe(that contains Things).
 
 ActionDecl := "Action" String is available when Condition, modifies the player by Mod, modifies the current location by Mod Maybe(before setting the current location to Id), and is described by ActionDesc. | "Action" String is available when Condition, ends the game, and is described by ActionDesc.
 
