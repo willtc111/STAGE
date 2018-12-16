@@ -51,7 +51,7 @@ ThingDesc := String | its name | the value of its Id | if it Pred then ThingDesc
 
 SubThingDesc := its description | ThingDesc
 
-ActionDesc := String | if Condition then ActionDesc, but ActionDesc otherwise | description by ThingDesc of the Either(player, current location) | ActionDesc + ActionDesc
+ActionDesc := String | if Condition then ActionDesc, but ActionDesc otherwise | description by SubThingDesc of the Either(player, current location) | ActionDesc + ActionDesc
 
 ClassDecl := Either("A", "An") Id Maybe(has Stats and) is described by ThingDesc.
 
@@ -63,9 +63,11 @@ Decl := ClassDecl | ThingDecl | ActionDecl
 
 Decls := Maybe(Decls Decl)
 
-PlayerDecl := "The" player Maybe(has Stats and) Maybe(has Things and) starts in Id and is described by ThingDesc.
+PlayerDecl := "The" player Maybe(has Stats and) Maybe(has Things and) Maybe(is described by ThingDesc and) starts in Id.
 
-Stage := Decls PlayerDecl Decls
+WorldDescDecl := "The" game state is described by ActionDesc.
+
+Stage := Decls Either(PlayerDecl Decls WorldDescDecl, WorldDescDecl Decls PlayerDecl) Decls
 
 ## Macros
 TODO

@@ -23,7 +23,7 @@ import Data.Maybe
 
 type Parser a = ParsecT String () Identity a
 
-parseStage :: String -> String -> Either String (PlayerDecl, [Decl])
+parseStage :: String -> String -> Either String Stage
 parseStage source = bimap show id . parse pStage source
 
 pfChoices :: [Parser a] -> Parser a
@@ -158,8 +158,8 @@ pActionDesc = ConcatADesc <$> sepBy1 pActionDescNoConcat (symbol "+")
   where pActionDescNoConcat =
           pfChoices [ LiteralADesc  <$> stringLiteral
                     , pfIfButOtherwise IfADesc pCondition pActionDesc
-                    , PlayerADesc   <$> between (symbols "description by") (symbols "of the player") pThingDesc
-                    , LocationADesc <$> between (symbols "description by") (symbols "of the currentlocation") pThingDesc
+                    , PlayerADesc   <$> between (symbols "description by") (symbols "of the player") pSubThingDesc
+                    , LocationADesc <$> between (symbols "description by") (symbols "of the current location") pSubThingDesc
                     ]
 
 pClassDecl :: Parser ClassDecl
@@ -221,17 +221,27 @@ pPlayerDecl :: Parser PlayerDecl
 pPlayerDecl = do symbols "The player"
                  playerStats <- pfOption Map.empty $ between (symbol "has") (symbol "and") pStats
                  playerThings <- pfOption Set.empty $ between (symbol "has") (symbol "and") pThings
+                 playerDesc <- pfOption (LiteralTDesc "") $ between (symbols "is described by") (symbol "and") pThingDesc
                  symbols "starts in"
                  playerStart <- identifier
-                 symbols "and is described by"
-                 playerDesc <- pThingDesc
                  dot
                  return PlayerDecl{..}
 
-pStage :: Parser (PlayerDecl, [Decl])
+pWorldDescDecl :: Parser WorldDescDecl
+pWorldDescDecl = WorldDescDecl <$> between (symbols "The game state is described by") dot pActionDesc
+
+pStage :: Parser Stage
 pStage = do whiteSpace
-            decls1 <- many pDecl
-            pPlayerDecl <- pPlayerDecl
-            decls2 <- many pDecl
+            declsBefore <- many pDecl
+            Stage{..} <- pfChoices [pPlayerFirst, pGameStateFirst]
+            declsAfter <- many pDecl
             eof
-            return (pPlayerDecl, decls1 ++ decls2)
+            return Stage{decls = declsBefore ++ decls ++ declsAfter, ..}
+  where pPlayerFirst    = do playerDecl <- pPlayerDecl
+                             decls <- many pDecl
+                             worldDescDecl <- pWorldDescDecl
+                             return Stage{..}
+        pGameStateFirst = do worldDescDecl <- pWorldDescDecl
+                             decls <- many pDecl
+                             playerDecl <- pPlayerDecl
+                             return Stage{..}

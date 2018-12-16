@@ -18,21 +18,22 @@ import Control.Monad
 
 type Fallible = Either String
 
-compileStage :: String -> IO (Fallible (World, Map.Map Name [Action]))
+compileStage :: String -> IO (Fallible Game)
 compileStage source = do sourceContents <- readFile source
                          return $ do preprocessed <- preprocessStage source sourceContents
                                      parsed <- parseStage source preprocessed
                                      buildStage parsed
 
-buildStage :: (PlayerDecl, [Decl]) -> Fallible (World, Map.Map Name [Action])
-buildStage (playerDecl, decls) =
+buildStage :: Stage -> Fallible Game
+buildStage Stage{..} =
   do let d@Decls{..} = sortDecls decls
          staticData = buildStaticData d
      classes <- buildClasses staticData classDecls
      things <- buildThings classes thingDecls
      actions <- buildActions staticData actionDecls
      (player, location) <- buildPlayer staticData playerDecl
-     return (World{..}, actions)
+     describeWorld <- buildWorldDesc staticData worldDescDecl
+     return Game{world = World{..}, ..}
 
 sortDecls :: [Decl] -> Decls
 sortDecls = foldr aux emptyDecls
@@ -48,6 +49,13 @@ buildStaticData Decls{..} = StaticData{..}
 validateThing :: StaticData -> Id -> Fallible ()
 validateThing staticData thingId =
   unless (thingExists staticData thingId) $ fail $ "Unrecognized thing id: " ++ thingId
+
+validateActionName :: Name -> Fallible ()
+validateActionName = let reserved = flip Set.notMember reservedNames
+                     in \name -> when (reserved name) $ fail $ "Reserved action name: " ++ name
+  where reservedNames = Set.fromList [ "help"
+                                     , "quit"
+                                     ]
 
 buildMapFromDeclsWith :: Ord k => (Map.Map k v -> a -> Fallible (k, v)) -> [a] -> Fallible (Map.Map k v)
 buildMapFromDeclsWith f = foldr ((=<<) . aux) (return Map.empty)
@@ -115,6 +123,8 @@ buildPlayer staticData PlayerDecl{..} =
                         }
      return (player, playerStart)
 
+buildWorldDesc :: StaticData -> WorldDescDecl -> Fallible (World -> String)
+buildWorldDesc staticData (WorldDescDecl desc) = buildActionDesc staticData desc
 
 buildThingDesc :: StaticData -> ThingDesc -> Fallible (World -> Thing -> String)
 buildThingDesc staticData desc = case desc of
@@ -153,13 +163,13 @@ buildActionDesc staticData desc = case desc of
        d1' <- buildActionDesc staticData d1
        d2' <- buildActionDesc staticData d2
        return $ \w -> if cond' w then d1' w else d2' w
-  PlayerADesc tDesc ->
-    do tDesc' <- buildThingDesc staticData tDesc
-       return $ \w -> tDesc' w (player w)
-  LocationADesc tDesc ->
-    do tDesc' <- buildThingDesc staticData tDesc
+  PlayerADesc desc ->
+    do desc' <- buildSubThingDesc staticData desc
+       return $ \w -> desc' w (player w)
+  LocationADesc desc ->
+    do desc' <- buildSubThingDesc staticData desc
        return $ \w -> let currentLocation = Map.lookup (location w) (SD.things w)
-                      in maybe "" (tDesc' w) currentLocation
+                      in maybe "" (desc' w) currentLocation
   ConcatADesc descs ->
     foldr (aux . buildActionDesc staticData) (return $ const "") descs
       where aux d1 d2 = do d1' <- d1

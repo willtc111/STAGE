@@ -1,4 +1,4 @@
-module UserInterface (outputWorld, outputThing, outputAction, getActionInput) where
+module UserInterface (outputGame, outputAction, getActionInput) where
 
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -8,14 +8,8 @@ import Data.List
 import StageData
 
 
-outputWorld :: World -> IO ()
-outputWorld world = do outputThing world currentLocation
-                       outputThing world (player world)
-  where currentLocation = fromJust (Map.lookup (location world) (things world))
-
-
-outputThing :: World -> Thing -> IO ()
-outputThing world thing = putStrLn (describeThing thing world)
+outputGame :: Game -> IO ()
+outputGame game = putStrLn $ (describeWorld game) (world game)
 
 
 outputAction :: World -> Action -> IO ()

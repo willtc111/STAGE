@@ -4,11 +4,13 @@
  - There are no stats or items.
  -}
 
-The player starts in room1 and is described by "You don't question your simple existence.".
+The game state is described by description by its description of the current location.
 
 A room is described by "You are in " + its name + ". There is a door here.".
 Location room1 is a room named "Room 1".
 Location room2 is a room named "Room 2".
+
+The player starts in room1.
 
 Moving from room1 to room2 is invoked with "go through door" and described by "You move to Room 2".
 

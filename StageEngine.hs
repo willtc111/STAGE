@@ -1,3 +1,5 @@
+{-# LANGUAGE RecordWildCards #-}
+
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Maybe
@@ -7,21 +9,21 @@ import StageData
 import StageCompiler
 import qualified UserInterface as UI
 
-runGame :: (Map.Map Name [Action]) -> World -> IO ()
-runGame actions world = do actionChoice <- getAction actions world
-                           case actionChoice of
-                             Nothing -> gameOver
-                             Just action -> do runResult <- runAction world action
-                                               case runResult of
-                                                 Nothing -> gameOver
-                                                 Just world' -> runGame actions world'
+runGame :: Game -> IO ()
+runGame game = do actionChoice <- getAction game
+                  case actionChoice of
+                       Nothing -> gameOver
+                       Just action -> do runResult <- runAction (world game) action
+                                         case runResult of
+                                           Nothing -> gameOver
+                                           Just world' -> runGame game{world = world'}
   where
     gameOver = return () -- figure out something better to do here
 
 -- Describe the world to the player and get an action choice
-getAction :: (Map.Map Name [Action]) -> World -> IO (Maybe Action)
-getAction actions world =
-  do UI.outputWorld world
+getAction :: Game -> IO (Maybe Action)
+getAction game@Game{..} =
+  do UI.outputGame game
      choice <- UI.getActionInput (Map.keysSet availableActions)
      return $ choice >>= flip Map.lookup availableActions
   where availableActions = Map.mapMaybe (find $ flip shouldRun world) actions
@@ -36,9 +38,7 @@ main :: IO ()
 main = do args <- getArgs
           case args of
             [gameFile] -> do game <- compileStage gameFile
-                             case game of
-                               Left  message          -> printError gameFile message
-                               Right (world, actions) -> runGame actions world
+                             either (printError gameFile) runGame game
             _          -> printUsage
   where printUsage = putStrLn "Usage: StageEngine gameFile"
         printError filename message = putStrLn ("Error loading game from " ++ filename ++ ":\n" ++ message)

@@ -61,8 +61,8 @@ data SubThingDesc = DefaultSubTDesc | CustomSubTDesc ThingDesc
 
 data ActionDesc = LiteralADesc String
                 | IfADesc Condition ActionDesc ActionDesc
-                | PlayerADesc ThingDesc
-                | LocationADesc ThingDesc
+                | PlayerADesc SubThingDesc
+                | LocationADesc SubThingDesc
                 | ConcatADesc [ActionDesc]
   deriving (Show)
 
@@ -124,6 +124,15 @@ data PlayerDecl = PlayerDecl
       , playerDesc :: ThingDesc
       }
   deriving (Show)
+
+data WorldDescDecl = WorldDescDecl ActionDesc
+  deriving (Show)
+
+data Stage = Stage
+      { decls :: [Decl]
+      , playerDecl :: PlayerDecl
+      , worldDescDecl :: WorldDescDecl
+      }
 
 data StaticData = StaticData
       { classIds :: Set.Set Id

@@ -8,6 +8,11 @@ type Name = String
 type Stats = Map.Map Id Integer
 type Things = Set.Set Id
 
+data Game = Game { world :: World
+                 , actions :: Map.Map Name [Action]
+                 , describeWorld :: World -> String
+                 }
+
 data World = World { things :: Map.Map Id Thing
                    , player :: Thing
                    , location :: Id
