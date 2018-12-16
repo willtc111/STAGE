@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
 {-# LANGUAGE RecordWildCards, TupleSections #-}
 
 module StageCompiler (compileStage) where
@@ -74,12 +73,11 @@ buildThings classes = buildMapFromDeclsWith $
   \things ThingDecl{..} ->
     do when (isJust $ Map.lookup thingId things)
          (fail $ "Duplicate thing id: " ++ thingId)
-       Class classStats desc <-
+       Class classStats describeThing <-
          maybe (fail $ "Unrecognized class id: " ++ thingClass)
                return
                (Map.lookup thingClass classes)
        let stats = Map.union stats classStats
-           describeThing = flip desc thing
            thing = Thing{..}
        return (thingId, thing)
 
@@ -116,7 +114,7 @@ buildPlayer staticData PlayerDecl{..} =
      mapM_ (validateThing staticData) playerThings
      desc <- buildThingDesc staticData playerDesc
      let player = Thing { name = ""
-                        , describeThing = flip desc player
+                        , describeThing = desc
                         , stats = playerStats
                         , contents = playerThings
                         , thingId = ""
@@ -152,7 +150,7 @@ buildThingDesc staticData desc = case desc of
                            return $ \t w -> d1' t w ++ d2' t w
 
 buildSubThingDesc :: StaticData -> SubThingDesc -> Fallible (World -> Thing -> String)
-buildSubThingDesc _          DefaultSubTDesc        = return $ flip describeThing
+buildSubThingDesc _          DefaultSubTDesc        = return $ \w t -> describeThing t w t
 buildSubThingDesc staticData (CustomSubTDesc tDesc) = buildThingDesc staticData tDesc
 
 buildActionDesc :: StaticData -> ActionDesc -> Fallible (World -> String)
@@ -228,17 +226,17 @@ buildCmp GeCmp = (>=)
 
 buildMod :: StaticData -> Mod -> Fallible (World -> Thing -> Thing)
 buildMod staticData mod = case mod of
-  DoNothingMod -> return $ const id
+  DoNothingMod -> return $ \_ t -> t
   SetMod stat expr ->
     do expr' <- buildExpr staticData expr
        return $ \w t -> setStat stat (expr' w t) t
-  GiveMod thingId ->
-    do validateThing staticData thingId
-       return $ \_ Thing{..} -> Thing{contents = Set.insert thingId contents, ..}
+  GiveMod thingToGive ->
+    do validateThing staticData thingToGive
+       return $ \_ Thing{..} -> Thing{contents = Set.insert thingToGive contents, ..}
   TakeMod pred ->
     do pred' <- buildPred staticData pred
-       let p w = maybe False (pred' w) . flip Map.lookup (SD.things w)
-       return $ \w Thing{..} -> Thing{contents = Set.filter (p w) contents, ..}
+       let keep w t = maybe False (not . pred' w) $ Map.lookup t (SD.things w)
+       return $ \w Thing{..} -> Thing{contents = Set.filter (keep w) contents, ..}
   IfMod pred thenMod elseMod ->
     do pred' <- buildPred staticData pred
        thenMod' <- buildMod staticData thenMod

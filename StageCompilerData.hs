@@ -133,6 +133,7 @@ data Stage = Stage
       , playerDecl :: PlayerDecl
       , worldDescDecl :: WorldDescDecl
       }
+  deriving (Show)
 
 data StaticData = StaticData
       { classIds :: Set.Set Id

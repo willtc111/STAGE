@@ -6,52 +6,87 @@ import Text.Parsec.Char
 import Data.Functor.Identity
 import Data.Bifunctor
 
-type Parser a = ParsecT String () Identity a
+type Macro = ParsecT String () Identity String
 
 preprocessStage :: String -> String -> Either String String
-preprocessStage source = bimap show id . parse pMacroExpand source
+preprocessStage source = bimap show id . parse mStage source
 
 
-pMacroExpand :: Parser String
-pMacroExpand = do macroExpansions <- many $ choice $ map try macros
-                  eof
-                  return $ concat macroExpansions
-  where macros = [ pMovingDecl
-                 , pAlwaysAvailable
-                 , pLocation
+mStage :: Macro
+mStage = do macroExpansions <- many $ choice $ map try macros
+            eof
+            return $ concat macroExpansions
+  where macros = [ mAlwaysAvailable
+                 , mLocation
+                 , mMovingDecl
+                 , mTakeDropDecl
                  , (:[]) <$> anyChar
                  ]
 
-pMovingDecl :: Parser String
-pMovingDecl =
-  do symbols "Moving from"
-     roomFrom <- identifier
-     symbol "to"
-     roomTo <- identifier
-     symbols "is invoked with"
-     actionName <- stringLiteral
-     symbols "and described by"
-     desc <- stringLiteral
-     string "."
-     return $ concat [ "Action \""
-                     , actionName
-                     , "\" is available when the current location is thing "
-                     , roomFrom
-                     , ", modifies the player by doing nothing, "
-                     , "modifies the current location by doing nothing "
-                     , "before setting the current location to "
-                     , roomTo
-                     , ", "
-                     , "and is described by \""
-                     , desc
-                     , "\"."
-                     ]
+mAlwaysAvailable :: Macro
+mAlwaysAvailable = symbols "is always available" >> return "is available when the player is unconditional"
 
-pAlwaysAvailable :: Parser String
-pAlwaysAvailable = symbols "is always available" >> return "is available when the player is unconditional"
-
-pLocation :: Parser String
-pLocation = do symbol "Location"
+mLocation :: Macro
+mLocation = do symbol "Location"
                loc <- identifier
                symbol "is"
                return $ "Thing " ++ loc ++ " is "
+
+mMovingDecl :: Macro
+mMovingDecl =
+  do symbols "Moving from"
+     place1 <- identifier
+     symbol "to"
+     place2 <- identifier
+     symbols "is invoked with"
+     name <- stringLiteral
+     symbols "and described by"
+     desc <- stringLiteral
+     dot
+     return $ concat [ "Action "
+                     , show name
+                     , " is available when the current location is thing "
+                     , place1
+                     , ", modifies the player by doing nothing, "
+                     , "modifies the current location by doing nothing "
+                     , "before setting the current location to "
+                     , place2
+                     , ", and is described by "
+                     , show desc
+                     , ".\n"
+                     ]
+
+mTakeDropDecl :: Macro
+mTakeDropDecl =
+  do symbols "The player can take and drop"
+     thing <- identifier
+     symbol "as"
+     name <- stringLiteral
+     dot
+     return $ concat [ "Action "
+                     , show ("take " ++ name)
+                     , " is available when the current location does contain"
+                     , " something that is thing "
+                     , thing
+                     , ", modifies the player by giving it "
+                     , thing
+                     , ", modifies the current location by taking away"
+                     , " everything it contains that is thing "
+                     , thing
+                     , ", and is described by "
+                     , show ("You take " ++ name ++ ".")
+                     , ".\n"
+                     , "Action "
+                     , show ("drop " ++ name)
+                     , " is available when the player does contain"
+                     , " something that is thing "
+                     , thing
+                     , ", modifies the player by taking away"
+                     , " everything it contains that is thing "
+                     , thing
+                     , ", modifies the current location by giving it "
+                     , thing
+                     , ", and is described by "
+                     , show ("You drop " ++ name ++ ".")
+                     , ".\n"
+                     ]

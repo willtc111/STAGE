@@ -1,16 +1,32 @@
 {-
- - A very simple test game.
- - The player can move between two rooms.
- - There are no stats or items.
+ - A simple test game.
  -}
 
-The game state is described by description by its description of the current location.
+The game state is described by
+  "You are in "
++ description by its description of the current location
++ description by its description of the player.
 
-A room is described by "You are in " + its name + ". There is a door here.".
-Location room1 is a room named "Room 1".
+The player is described by
+  if it does contain something that is a trinket
+    then "\nYou are carrying a trinket.",
+    but  "" otherwise
+and starts in room1.
+
+A trinket is described by "A small trinket.".
+Thing trinket is a trinket.
+
+The player can take and drop trinket as "the trinket".
+
+A room is described by
+  its name + ". "
++ "There is a door to another room. "
++ if it does contain something that is a trinket
+    then "This room contains a trinket.",
+    but  "" otherwise.
+
+Location room1 is a room named "Room 1" that contains thing trinket.
 Location room2 is a room named "Room 2".
-
-The player starts in room1.
 
 Moving from room1 to room2 is invoked with "go through door" and described by "You move to Room 2".
 

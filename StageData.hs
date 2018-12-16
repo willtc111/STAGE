@@ -24,7 +24,7 @@ data Action = Action { shouldRun :: World -> Bool
                      }
 
 data Thing = Thing { name :: Name
-                   , describeThing :: World -> String
+                   , describeThing :: World -> Thing -> String
                    , stats :: Stats
                    , contents :: Things
                    , thingId :: Id
