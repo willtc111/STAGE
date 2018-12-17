@@ -15,8 +15,14 @@ import Test.QuickCheck.Instances
 import Control.Monad
 
 {- Tests -}
-
-
+checkParseStage :: SCD.Stage -> Bool
+checkParseStage stage =
+  case (parseStage "" (stringOf stage)) of
+    Left  _ -> False
+    Right s -> (stringOf stage) == (stringOf s)
+  where
+    stringOf :: SCD.Stage -> String
+    stringOf = render . stageD
 
 
 {- Generators -}
@@ -36,7 +42,7 @@ genAlphaNum :: Gen Char
 genAlphaNum = frequency $ alphaFrequencies ++ digitFrequencies
 
 genAlphaNumString :: Gen String
-genAlphaNumString = listOf genAlphaNum
+genAlphaNumString = listOf1 genAlphaNum
 
 genId :: Gen SD.Id
 genId = genAlphaNumString
@@ -130,13 +136,13 @@ instance Arbitrary SCD.Op where
 
 
 genThingDesc :: Gen SCD.ThingDesc
-genThingDesc = frequency [(25, liftM SCD.LiteralTDesc genAlphaNumString),
-                          (25, return SCD.NameTDesc),
-                          (25, liftM SCD.StatTDesc genId),
-                          (5,  liftM3 SCD.IfPTDesc genPred genThingDesc genThingDesc),
-                          (5,  liftM3 SCD.IfCTDesc genCondition genThingDesc genThingDesc),
-                          (14, liftM2 SCD.ContainedTDesc genSubThingDesc genAlphaNumString),
-                          (1,  liftM SCD.ConcatTDesc (listOf genThingDesc))]
+genThingDesc =
+  liftM SCD.ConcatTDesc $ listOf1 $ frequency [(5, liftM SCD.LiteralTDesc genAlphaNumString),
+                                               (5, return SCD.NameTDesc),
+                                               (5, liftM SCD.StatTDesc genId),
+                                               (1, liftM3 SCD.IfPTDesc genPred genThingDesc genThingDesc),
+                                               (1, liftM3 SCD.IfCTDesc genCondition genThingDesc genThingDesc),
+                                               (3, liftM2 SCD.ContainedTDesc genSubThingDesc genAlphaNumString)]
 
 instance Arbitrary SCD.ThingDesc where
   arbitrary = genThingDesc
@@ -151,11 +157,11 @@ instance Arbitrary SCD.SubThingDesc where
 
 
 genActionDesc :: Gen SCD.ActionDesc
-genActionDesc = frequency [(49, liftM SCD.LiteralADesc genAlphaNumString),
-                           (10, liftM3 SCD.IfADesc genCondition genActionDesc genActionDesc),
-                           (20, liftM SCD.PlayerADesc genSubThingDesc),
-                           (20, liftM SCD.LocationADesc genSubThingDesc),
-                           (1,  liftM SCD.ConcatADesc (listOf genActionDesc))]
+genActionDesc =
+  liftM SCD.ConcatADesc $ listOf1 $ frequency [(5, liftM SCD.LiteralADesc genAlphaNumString),
+                                               (1, liftM3 SCD.IfADesc genCondition genActionDesc genActionDesc),
+                                               (2, liftM SCD.PlayerADesc genSubThingDesc),
+                                               (2, liftM SCD.LocationADesc genSubThingDesc)]
 
 instance Arbitrary SCD.ActionDesc where
   arbitrary = genActionDesc
@@ -227,7 +233,8 @@ genPlayerDecl :: Gen SCD.PlayerDecl
 genPlayerDecl = do playerStats <- genStats
                    playerThings <- genThings
                    playerStart <- genId
-                   playerDesc <- genThingDesc
+                   playerDesc <- frequency [(5, genThingDesc),
+                                            (1, return $ SCD.LiteralTDesc "")]
                    return SCD.PlayerDecl{..}
 
 instance Arbitrary SCD.PlayerDecl where
@@ -498,10 +505,10 @@ actionDeclD SCD.ActionDecl{..} =
   <+> modD modifyPlayer
   <> text ", modifies the current location by"
   <+> modD modifyCurrentLocation
-  <+> case newLocation of
-        Just id -> text "before setting the current location to"
-                   <+> idD id
-        Nothing -> empty
+  <+> (case newLocation of
+         Just id -> text "before setting the current location to"
+                    <+> idD id
+         Nothing -> empty)
   <> text ", and is described by"
   <+> actionDescD actionDesc
   <> text "."
@@ -530,20 +537,23 @@ declsD SCD.Decls{..} = classDeclsD $+$ thingDeclsD $+$ actionDeclsD
 playerDeclD :: SCD.PlayerDecl -> Doc
 playerDeclD SCD.PlayerDecl{..} =
   text "The player"
-  <+> if null playerStats
-        then empty
-        else text "has"
-             <+> statsD playerStats
-             <+> text "and"
-  <+> if null playerThings
-        then empty
-        else text "has"
-             <+> thingsD playerThings
-             <+> text "and"
+  <+> (if null playerStats
+         then empty
+         else text "has"
+              <+> statsD playerStats
+              <+> text "and")
+  <+> (if null playerThings
+         then empty
+         else text "has"
+              <+> thingsD playerThings
+              <+> text "and")
+  <+> (case playerDesc of
+         (SCD.LiteralTDesc "") -> empty
+         _                     -> text "is described by"
+                                  <+> thingDescD playerDesc
+                                  <+> text "and")
   <+> text "starts in"
   <+> idD playerStart
-  <+> text "and is described by"
-  <+> thingDescD playerDesc
   <> text "."
 
 worldDescDeclD :: SCD.WorldDescDecl -> Doc
@@ -554,13 +564,13 @@ worldDescDeclD (SCD.WorldDescDecl actDesc) =
 
 stageD :: SCD.Stage -> Doc
 stageD SCD.Stage{..} = (fsep $ fmap declD firstDeclList)
-                       $+$ if playerDeclFirst
+                       $+$ (if playerDeclFirst
                              then playerDeclD playerDecl
                                   $+$ (fsep $ fmap declD middleDeclList)
                                   $+$ worldDescDeclD worldDescDecl
                              else worldDescDeclD worldDescDecl
                                   $+$ (fsep $ fmap declD middleDeclList)
-                                  $+$ playerDeclD playerDecl
+                                  $+$ playerDeclD playerDecl)
                        $+$ (fsep $ fmap declD lastDeclList)
   where firstDeclList = take 1 decls
         middleDeclList = take 1 (drop 1 decls)
