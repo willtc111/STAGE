@@ -118,3 +118,12 @@ Moving from room1 to room2 is invoked with "go through door" and described by "Y
 Moving from room2 to room1 is invoked with "go through door" and described by "You move to Room 1".
 
 The default quit action is available.
+
+## Takeaways from the project
+Learning to use Parsec was a large part of this project.  While the execution of the game is relatively straight forward, the compilation from STAGE code into the game was easily the most difficult portion to develop.  Having learned about parsing in class gave us a solid foundation to start with, though.
+
+Learning about pretty printing and QuickCheck testing in class came in handy as well, as the testing of the parser combined both of these topics and presented a challenging twist on the simpler examples we had covered previously.
+
+Designing the STAGE language itself was a continuous process, as we found problems or potential simplifications throughout the project's development.  Keeping track of the growing web of dependencies between modules was an ongoing task, but one we were able to handle very well.
+
+While we weren't able to implement everything we had initially planned, the development of this project was an exciting challenge that really helped to solidify many of the topics we had previously covered in during the semester.
