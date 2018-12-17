@@ -1,0 +1,82 @@
+{-
+- The player navigates a calculator.
+- This game does not use items.
+-}
+
+The player has stats answer = 0 and operand = 0 and starts in numRoom.
+
+The game state is described by
+  "You are in the "
++ description by its name of the current location
++ " room. A mechanical display on the wall reads:\n\n"
++ "  Current answer: " + description by the value of its answer of the player + "\n"
++ "    Next operand: " + description by the value of its operand of the player + "\n\n"
++ description by its description of the current location.
+
+A numRoom has stat digit = 0 and is described by
+  "There is a large lever set in the floor below a dial on the wall. The dial is set to "
++ if it has digit = 10
+    then "\"Clear operand\"",
+    but the value of its digit otherwise
++ ".".
+
+Action "turn dial" is available when the current location is a numRoom, modifies
+the player by doing nothing, modifies the current location by setting its digit
+to (its digit + 1) % 11, and is described by "You turn the dial.".
+
+Location numRoom is a numRoom named "number entry".
+
+Action "pull lever" is available when the current location is thing numRoom,
+modifies the player by
+  first setting its digit to numRoom's digit and then
+  if it has digit = 10
+    then setting its operand to 0,
+    but setting its operand to its operand * 10 + its digit otherwise,
+modifies the current location by doing nothing, and is described by
+"You pull the lever. A mechanical whirring of gears can be heard behind the walls.".
+
+An opRoom is described by "There is a large lever set in the floor.".
+
+Action "go back" is available when the current location is an opRoom,
+modifies the player by setting its operand to 0, modifies the current location
+by doing nothing before setting the current location to numRoom, and is described by
+"As you open the door to return to the central room, a mechanical whirring of gears can be heard behind the walls.".
+
+Location addRoom is an opRoom named "addition".
+
+Moving from numRoom to addRoom is invoked with "go north" and described by "You go through the northern door.".
+
+Action "pull lever" is available when the current location is thing addRoom,
+modifies the player by setting its answer to its answer + its operand,
+modifies the current location by doing nothing, and is described by
+"You pull the lever. A mechanical whirring of gears can be heard behind the walls.".
+
+Location subRoom is an opRoom named "subtraction".
+
+Moving from numRoom to subRoom is invoked with "go east" and described by "You go through the eastern door.".
+
+Action "pull lever" is available when the current location is thing subRoom,
+modifies the player by setting its answer to its answer - its operand,
+modifies the current location by doing nothing, and is described by
+"You pull the lever. A mechanical whirring of gears can be heard behind the walls.".
+
+Action "quit" is always available, ends the game, and is described by
+"Final answer: " + description by the value of its answer of the player.
+
+Location mulRoom is an opRoom named "multiplication".
+
+Moving from numRoom to mulRoom is invoked with "go south" and described by "You go through the southern door.".
+
+Action "pull lever" is available when the current location is thing mulRoom,
+modifies the player by setting its answer to its answer * its operand,
+modifies the current location by doing nothing, and is described by
+"You pull the lever. A mechanical whirring of gears can be heard behind the walls.".
+
+Location divRoom is an opRoom named "division".
+
+Moving from numRoom to divRoom is invoked with "go west" and described by "You go through the western door.".
+
+Action "pull lever" is available when the current location is thing divRoom,
+modifies the player by setting its answer to its answer / its operand,
+modifies the current location by doing nothing, and is described by
+"You pull the lever. A mechanical whirring of gears can be heard behind the walls.".
