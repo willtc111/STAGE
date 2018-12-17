@@ -1,6 +1,7 @@
 {-
- - A simple test game.
- -}
+- The player can carry a trinket between two rooms.
+- This game does not use stats.
+-}
 
 The game state is described by
   "You are in "
@@ -32,8 +33,4 @@ Moving from room1 to room2 is invoked with "go through door" and described by "Y
 
 Moving from room2 to room1 is invoked with "go through door" and described by "You move to Room 1".
 
-Action "jump" is always available, modifies the player by doing nothing, modifies
-the current location by doing nothing, and is described by "You jump. It doesn't seem to accomplish much.".
-
-Action "pace" is available when the current location is a room, modifies the player by doing nothing, modifies
-the current location by doing nothing, and is described by "You pace around the room for a short while.".
+The default quit action is available.

@@ -78,3 +78,5 @@ Stage := Decls Either(PlayerDecl Decls WorldDescDecl, WorldDescDecl Decls Player
 "Moving from <place1 :: Id> to <place2 :: Id> is invoked with <name :: String> and described by <desc :: String>." is shorthand for declaring an action to move between places.
 
 "The player can take and drop <thing :: Id> as <name :: String>." is shorthand for declaring a pair of actions to take and drop a thing. The given name will be used in the action name, and need not be the same as the thing's name.
+
+"The default quit action is available." is shorthand for declaring an action to silently quit the game.

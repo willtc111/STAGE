@@ -20,6 +20,7 @@ mStage = do macroExpansions <- many $ choice $ map try macros
                  , mLocation
                  , mMovingDecl
                  , mTakeDropDecl
+                 , mQuitDecl
                  , (:[]) <$> anyChar
                  ]
 
@@ -90,3 +91,7 @@ mTakeDropDecl =
                      , show ("You drop " ++ name ++ ".")
                      , ".\n"
                      ]
+
+mQuitDecl :: Macro
+mQuitDecl = symbols "The default quit action is available."
+          >> return "Action \"quit\" is available when the player is unconditional, ends the game, and is described by \"\"."
