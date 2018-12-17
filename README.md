@@ -7,17 +7,21 @@ Team Members: Ari Zerner & Will Carver
 STAGE is a domain-specific language geared towards the development of text-based adventure games.  It allows developers to build a game world which players will be able to interact with through simple textual commands.
 
 ## Modules
-### DSL Compiler
-Provides reasonable feedback on errors in STAGE code
-Builds the starting state of the game
+### DSL Preprocessor
+Converts any macros into their proper expansions.
+### DSL Compiler and Parser
+Provides reasonable feedback on errors in STAGE code.
+Feedback includes where in the STAGE code an unexpected symbol was encountered (line and column) and what symbol was found/expected.
+Builds the starting state of the game from the STAGE code.
 ### Game Engine
-Manages the state of the world/player during gameplay
-Executes action commands from the UI to update the state of the world/player
+Manages the state of the world/player during gameplay.
+Executes action commands received from the UI to update the state of the world/player.
 ### User Interface
-Provides output of what happens in the game
-Takes input from the player in the form of text commands
-Provides auxiliary commands such as "help" or "quit" that are not part of the base game
-
+Provides output of what happens in the game.
+Takes input from the player in the form of text commands.
+Provides auxiliary commands such as "help" that are not part of the base game.
+### Testing
+Provides QuickCheck tests for the other modules (currently only for the parser).
 
 ## DSL Grammar
 Start = Stage
@@ -80,3 +84,37 @@ Stage := Decls Either(PlayerDecl Decls WorldDescDecl, WorldDescDecl Decls Player
 "The player can take and drop <thing :: Id> as <name :: String>." is shorthand for declaring a pair of actions to take and drop a thing. The given name will be used in the action name, and need not be the same as the thing's name.
 
 "The default quit action is available." is shorthand for declaring an action to silently quit the game.
+
+## Example STAGE Program
+
+The game state is described by
+  "You are in "
++ description by its description of the current location
++ description by its description of the player.
+
+The player is described by
+  if it does contain something that is a trinket
+    then "\nYou are carrying a trinket.",
+    but  "" otherwise
+and starts in room1.
+
+A trinket is described by "A small trinket.".
+Thing trinket is a trinket.
+
+The player can take and drop trinket as "the trinket".
+
+A room is described by
+  its name + ". "
++ "There is a door to another room. "
++ if it does contain something that is a trinket
+    then "This room contains a trinket.",
+    but  "" otherwise.
+
+Location room1 is a room named "Room 1" that contains thing trinket.
+Location room2 is a room named "Room 2".
+
+Moving from room1 to room2 is invoked with "go through door" and described by "You move to Room 2".
+
+Moving from room2 to room1 is invoked with "go through door" and described by "You move to Room 1".
+
+The default quit action is available.
