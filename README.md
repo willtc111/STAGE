@@ -70,4 +70,11 @@ WorldDescDecl := "The" game state is described by ActionDesc.
 Stage := Decls Either(PlayerDecl Decls WorldDescDecl, WorldDescDecl Decls PlayerDecl) Decls
 
 ## Macros
-TODO
+
+"Location" is a synonym for "Thing".
+
+"is always available" can be used instead of "is available when..." when declaring an action that is always available.
+
+"Moving from <place1 :: Id> to <place2 :: Id> is invoked with <name :: String> and described by <desc :: String>." is shorthand for declaring an action to move between places.
+
+"The player can take and drop <thing :: Id> as <name :: String>." is shorthand for declaring a pair of actions to take and drop a thing. The given name will be used in the action name, and need not be the same as the thing's name.

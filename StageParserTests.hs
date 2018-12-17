@@ -17,9 +17,12 @@ import Control.Monad
 {- Tests -}
 checkParseStage :: SCD.Stage -> Bool
 checkParseStage stage =
-  case (parseStage "" (render $ stageD stage)) of
+  case (parseStage "" (stringOf stage)) of
     Left  _ -> False
-    Right s -> stage == s
+    Right s -> (stringOf stage) == (stringOf s)
+  where
+    stringOf :: SCD.Stage -> String
+    stringOf = render . stageD
 
 
 {- Generators -}
@@ -133,13 +136,13 @@ instance Arbitrary SCD.Op where
 
 
 genThingDesc :: Gen SCD.ThingDesc
-genThingDesc = frequency [(25, liftM SCD.LiteralTDesc genAlphaNumString),
-                          (25, return SCD.NameTDesc),
-                          (25, liftM SCD.StatTDesc genId),
-                          (5,  liftM3 SCD.IfPTDesc genPred genThingDesc genThingDesc),
-                          (5,  liftM3 SCD.IfCTDesc genCondition genThingDesc genThingDesc),
-                          (14, liftM2 SCD.ContainedTDesc genSubThingDesc genAlphaNumString),
-                          (1,  liftM SCD.ConcatTDesc (listOf genThingDesc))]
+genThingDesc =
+  liftM SCD.ConcatTDesc $ listOf1 $ frequency [(5, liftM SCD.LiteralTDesc genAlphaNumString),
+                                               (5, return SCD.NameTDesc),
+                                               (5, liftM SCD.StatTDesc genId),
+                                               (1, liftM3 SCD.IfPTDesc genPred genThingDesc genThingDesc),
+                                               (1, liftM3 SCD.IfCTDesc genCondition genThingDesc genThingDesc),
+                                               (3, liftM2 SCD.ContainedTDesc genSubThingDesc genAlphaNumString)]
 
 instance Arbitrary SCD.ThingDesc where
   arbitrary = genThingDesc
@@ -154,11 +157,11 @@ instance Arbitrary SCD.SubThingDesc where
 
 
 genActionDesc :: Gen SCD.ActionDesc
-genActionDesc = frequency [(49, liftM SCD.LiteralADesc genAlphaNumString),
-                           (10, liftM3 SCD.IfADesc genCondition genActionDesc genActionDesc),
-                           (20, liftM SCD.PlayerADesc genSubThingDesc),
-                           (20, liftM SCD.LocationADesc genSubThingDesc),
-                           (1,  liftM SCD.ConcatADesc (listOf genActionDesc))]
+genActionDesc =
+  liftM SCD.ConcatADesc $ listOf1 $ frequency [(5, liftM SCD.LiteralADesc genAlphaNumString),
+                                               (1, liftM3 SCD.IfADesc genCondition genActionDesc genActionDesc),
+                                               (2, liftM SCD.PlayerADesc genSubThingDesc),
+                                               (2, liftM SCD.LocationADesc genSubThingDesc)]
 
 instance Arbitrary SCD.ActionDesc where
   arbitrary = genActionDesc
@@ -230,7 +233,8 @@ genPlayerDecl :: Gen SCD.PlayerDecl
 genPlayerDecl = do playerStats <- genStats
                    playerThings <- genThings
                    playerStart <- genId
-                   playerDesc <- genThingDesc
+                   playerDesc <- frequency [(5, genThingDesc),
+                                            (1, return $ SCD.LiteralTDesc "")]
                    return SCD.PlayerDecl{..}
 
 instance Arbitrary SCD.PlayerDecl where
@@ -543,10 +547,11 @@ playerDeclD SCD.PlayerDecl{..} =
          else text "has"
               <+> thingsD playerThings
               <+> text "and")
-  <+> (if null playerDesc
-         then empty
-         else text "and is described by"
-              <+> thingDescD playerDesc)
+  <+> (case playerDesc of
+         (SCD.LiteralTDesc "") -> empty
+         _                     -> text "is described by"
+                                  <+> thingDescD playerDesc
+                                  <+> text "and")
   <+> text "starts in"
   <+> idD playerStart
   <> text "."

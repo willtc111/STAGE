@@ -18,18 +18,14 @@ outputAction world action = putStrLn (describeAction action world)
 
 getActionInput :: (Set.Set Name) -> IO (Maybe Name)
 getActionInput actions =
-  do putStrLn "What do you want to do next?"
+  do putStr "> "
      input <- getLine
      case input of
        command
          | Set.member command actions  -> return $ Just command
-         | "quit" `isPrefixOf` command -> return Nothing
          | "help" `isPrefixOf` command -> displayActionOptions >> getActionInput actions
          | otherwise                   -> printTryAgainMessage >> getActionInput actions
   where
-    displayActionOptions = do putStrLn "help"
-                              putStrLn "quit"
+    displayActionOptions = do putStrLn "Available actions:"
                               putStr (foldr (\name s -> name ++ "\n" ++ s) "\n" (Set.elems actions))
-    printTryAgainMessage = do putStrLn "Unrecognized command, please try again or enter:"
-                              putStrLn "\"help\" to show options"
-                              putStrLn "\"quit\" to exit the game"
+    printTryAgainMessage = do putStrLn "Unrecognized action. Please try again or enter \"help\" to show options."
