@@ -77,9 +77,7 @@ buildThings classes = buildMapFromDeclsWith $
          maybe (fail $ "Unrecognized class id: " ++ thingClass)
                return
                (Map.lookup thingClass classes)
-       let stats = Map.union stats classStats
-           thing = Thing{..}
-       return (thingId, thing)
+       return (thingId, Thing{stats = Map.union stats classStats, ..})
 
 buildActions :: StaticData -> [ActionDecl] -> Fallible (Map.Map Name [Action])
 buildActions staticData = buildMapFromDeclsWith $
@@ -147,7 +145,7 @@ buildThingDesc staticData desc = case desc of
     foldr (aux . buildThingDesc staticData) (return $ \_ _ -> "") descs
       where aux d1 d2 = do d1' <- d1
                            d2' <- d2
-                           return $ \t w -> d1' t w ++ d2' t w
+                           return $ \w t -> d1' w t ++ d2' w t
 
 buildSubThingDesc :: StaticData -> SubThingDesc -> Fallible (World -> Thing -> String)
 buildSubThingDesc _          DefaultSubTDesc        = return $ \w t -> describeThing t w t
@@ -261,7 +259,7 @@ buildExpr staticData expr = case expr of
   StatExpr stat -> return $ \_ t -> getStat stat t
   ThingStatExpr thingId stat ->
     do validateThing staticData thingId
-       return $ \w _ -> getStat stat $ fromJust $ Map.lookup thingId (SD.things w)
+       return $ \w _ -> fromMaybe 0 $ (SD.stats <$> Map.lookup thingId (SD.things w)) >>= Map.lookup stat
   PlayerStatExpr stat -> return $ \w _ -> getStat stat (SD.player w)
 
 buildOp :: Op -> (Integer -> Integer -> Integer)

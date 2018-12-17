@@ -51,7 +51,7 @@ pfOption x = option x . try
 
 pfIfButOtherwise :: (a -> b -> b -> c) -> Parser a -> Parser b -> Parser c
 pfIfButOtherwise combine pA pB =
-  do symbols "if it"
+  do symbols "if"
      if' <- pA
      symbol "then"
      then' <- pB
@@ -62,7 +62,7 @@ pfIfButOtherwise combine pA pB =
      return $ combine if' then' else'
 
 pAn :: Parser ()
-pAn = pfChoices [symbols "a", symbols "an"]
+pAn = lexeme $ char 'a' >> optional (char 'n')
 
 pStats :: Parser Stats
 pStats = pfChoices [ uncurry Map.singleton <$> (symbol "stat" >> pStat)
@@ -116,7 +116,7 @@ pMod = pfChoices [ DoNothingMod <$ symbols "doing nothing"
                                 <*> (symbol "to" >> pExpr)
                  , GiveMod      <$> (symbols "giving it" >> identifier)
                  , TakeMod      <$> (symbols "taking away everything it contains that" >> pPred)
-                 , pfIfButOtherwise IfMod pPred pMod
+                 , pfIfButOtherwise IfMod (symbol "it" >> pPred) pMod
                  , AndMod       <$> (symbol "first" >> pMod)
                                 <*> (symbols "and then" >> pMod)
                  ]
@@ -142,7 +142,7 @@ pThingDesc = ConcatTDesc <$> sepBy1 pThingDescNoConcat (symbol "+")
           pfChoices [ LiteralTDesc   <$> stringLiteral
                     , NameTDesc      <$  symbols "its name"
                     , StatTDesc      <$> (symbols "the value of its" >> identifier)
-                    , pfIfButOtherwise IfPTDesc pPred pThingDesc
+                    , pfIfButOtherwise IfPTDesc (symbol "it" >> pPred) pThingDesc
                     , pfIfButOtherwise IfCTDesc pCondition pThingDesc
                     , ContainedTDesc <$> (symbols "for each contained thing," >> pSubThingDesc)
                                      <*> (comma >> symbols "separated by String" >> stringLiteral)
@@ -163,7 +163,7 @@ pActionDesc = ConcatADesc <$> sepBy1 pActionDescNoConcat (symbol "+")
                     ]
 
 pClassDecl :: Parser ClassDecl
-pClassDecl = do pfChoices [symbol "A", symbol "An"]
+pClassDecl = do lexeme $ char 'A' >> optional (char 'n')
                 classId <- identifier
                 classStats <- pfOption Map.empty $ between (symbol "has") (symbol "and") pStats
                 symbols "is described by"
